@@ -1,31 +1,26 @@
-import { Router } from 'express';
-import authRoutes from './routes/auth.routes';
-import dashboardRoutes from './routes/dashboard.routes';
-import visitRoutes from './routes/visit.routes';
-import patientRoutes from './routes/patient.routes';
-import scheduleRoutes from './routes/schedule.routes';
-import leaveRoutes from './routes/leave.routes';
-import commissionRoutes from './routes/commission.routes';
-import paymentRoutes from './routes/payment.routes';
-import userRoutes from './routes/user.routes';
-import treatmentRoutes from './routes/treatment.routes';
+import express, { Application } from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import helmet from 'helmet';
+import routes from './routes';
+import { errorHandler } from './middlewares/error.middleware';
 
-const router = Router();
+dotenv.config();
+const app: Application = express();
 
-// Auth routes (public & authenticated)
-router.use('/auth', authRoutes);
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Doctor routes
-router.use('/doctor/dashboard', dashboardRoutes);
-router.use('/doctor/visits', visitRoutes);
-router.use('/doctor/patients', patientRoutes);
-router.use('/doctor/treatments', treatmentRoutes);
-router.use('/doctor/schedules', scheduleRoutes);
-router.use('/doctor/leaves', leaveRoutes);
-router.use('/doctor/finance/commissions', commissionRoutes);
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', message: 'RoxyDental API is running' });
+});
 
-// Shared routes (doctor & nurse with proper role check in middleware)
-router.use('/payments', paymentRoutes);
-router.use('/users', userRoutes);
+app.use('/api', routes);
+app.use(errorHandler);
 
-export default router;
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

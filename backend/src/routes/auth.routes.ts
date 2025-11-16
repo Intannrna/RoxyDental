@@ -8,7 +8,7 @@ import {
   forgotPasswordSchema,
   changePasswordSchema
 } from '../validators/auth.validator';
-import { resetPasswordSchema } from '../validators/Resetpassword.validator ';
+import { resetPasswordSchema } from '../validators/reset-password.validator';
 
 const router = Router();
 const authController = new AuthController();
