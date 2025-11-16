@@ -8,6 +8,7 @@ import leaveRoutes from './leave.routes';
 import commissionRoutes from './commission.routes';
 import paymentRoutes from './payment.routes';
 import userRoutes from './user.routes';
+import treatmentRoutes from './treatment.routes';
 
 const router = Router();
 
@@ -15,6 +16,7 @@ router.use('/auth', authRoutes);
 router.use('/doctor/dashboard', dashboardRoutes);
 router.use('/doctor/visits', visitRoutes);
 router.use('/doctor/patients', patientRoutes);
+router.use('/doctor/treatments', treatmentRoutes);
 router.use('/doctor/schedules', scheduleRoutes);
 router.use('/doctor/leaves', leaveRoutes);
 router.use('/doctor/finance/commissions', commissionRoutes);
