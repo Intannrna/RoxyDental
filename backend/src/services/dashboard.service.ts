@@ -55,6 +55,7 @@ export class DashboardService {
         where: { id: userId },
         select: {
           id: true,
+          username: true,
           fullName: true,
           email: true,
           phone: true,
@@ -65,7 +66,8 @@ export class DashboardService {
           sipStartDate: true,
           sipEndDate: true,
           profilePhoto: true,
-          isActive: true
+          isActive: true,
+          createdAt: true
         }
       }),
       prisma.schedule.findMany({

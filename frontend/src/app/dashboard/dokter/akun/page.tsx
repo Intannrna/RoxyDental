@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DoctorNavbar from "@/components/ui/navbardr";
 import { userService } from "@/services/user.service";
+import { dashboardService } from "@/services/dashboard.service";
 import {
   CreditCard,
   Briefcase,
@@ -14,28 +14,61 @@ import {
   Mail,
   MapPin,
   Calendar,
-  FileText,
   BadgeCheck,
   User
 } from "lucide-react";
 
+interface ProfileData {
+  id: string;
+  username: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  role: string;
+  specialization?: string;
+  education?: string;
+  experience?: string;
+  sipNumber?: string;
+  sipStartDate?: string;
+  sipEndDate?: string;
+  profilePhoto?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+interface ScheduleItem {
+  day: string;
+  start: string;
+  end: string;
+  location: string;
+}
+
 export default function MedicalStaffProfile() {
-  const [profileData, setProfileData] = useState<any>(null);
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadProfile();
+    loadData();
   }, []);
 
-  const loadProfile = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const response = await userService.getProfile();
-      if (response.success) {
-        setProfileData(response.data);
+      const [profileResponse, dashboardResponse] = await Promise.all([
+        userService.getProfile(),
+        dashboardService.getDoctorSummary()
+      ]);
+
+      if (profileResponse.success) {
+        setProfileData(profileResponse.data);
+      }
+
+      if (dashboardResponse.success && dashboardResponse.data.schedules) {
+        setSchedules(dashboardResponse.data.schedules);
       }
     } catch (error) {
-      console.error('Error loading profile:', error);
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -50,9 +83,9 @@ export default function MedicalStaffProfile() {
         </div>
       </div>
     );
-  };
+  }
 
-  const formatDate = (date: string | null) => {
+  const formatDate = (date: string | null | undefined) => {
     if (!date) return '-';
     return new Date(date).toLocaleDateString('id-ID', {
       day: 'numeric',
@@ -71,21 +104,39 @@ export default function MedicalStaffProfile() {
     const totalDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     const remainingDays = Math.floor((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
+    if (totalDays <= 0 || remainingDays < 0) {
+      return {
+        percentage: 0,
+        years: 0,
+        months: 0
+      };
+    }
+
     const percentage = (remainingDays / totalDays) * 100;
     const years = Math.floor(remainingDays / 365);
     const months = Math.floor((remainingDays % 365) / 30);
 
     return {
-      percentage: Math.max(0, percentage),
+      percentage: Math.max(0, Math.min(100, percentage)),
       years,
       months
     };
   };
 
+  const hasActiveSchedule = schedules.some(s => s.start !== '-' && s.end !== '-');
   const sipRemaining = calculateSipRemaining();
-  const practiceStatus = profileData?.sipNumber && profileData?.sipEndDate ? 
-    (new Date(profileData.sipEndDate) > new Date() ? 'ACTIVE' : 'EXPIRED') : 
-    'INACTIVE';
+  
+  let practiceStatus: 'ACTIVE' | 'INACTIVE' | 'EXPIRED' = 'INACTIVE';
+  if (profileData?.sipNumber && profileData?.sipEndDate) {
+    const endDate = new Date(profileData.sipEndDate);
+    const today = new Date();
+    
+    if (endDate > today && hasActiveSchedule) {
+      practiceStatus = 'ACTIVE';
+    } else if (endDate <= today) {
+      practiceStatus = 'EXPIRED';
+    }
+  }
 
   return (
     <div className="min-h-screen w-full bg-[#FFE6EE]">
@@ -94,7 +145,7 @@ export default function MedicalStaffProfile() {
       <div className="px-10 py-10 w-full">
         <h1 className="text-3xl font-bold text-[#D6336C] mb-1">Profil Tenaga Medis</h1>
         <p className="text-[#E85A88] mb-6">
-          Informasi Akun & Status Praktik Anda di Klinik
+          Informasi Akun & Status Praktik Anda di Klinik Sehat
         </p>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -146,8 +197,10 @@ export default function MedicalStaffProfile() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InfoItem label="ID Karyawan" value={profileData?.username || '-'} icon="id" />
                 <InfoItem label="No. STR" value={profileData?.sipNumber || '-'} icon="badge" />
+                <InfoItem label="No. SIP" value={profileData?.sipNumber || '-'} icon="badge" />
                 <InfoItem label="Nomor Telepon" value={profileData?.phone || '-'} icon="phone" />
                 <InfoItem label="Email" value={profileData?.email || '-'} icon="mail" />
+                <InfoItem label="Lokasi Praktik" value="RoxyDental - Jakarta Pusat" icon="map" />
                 <InfoItem 
                   label="Bergabung Sejak" 
                   value={formatDate(profileData?.createdAt)} 
@@ -167,15 +220,23 @@ export default function MedicalStaffProfile() {
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-yellow-900 font-semibold">Status Praktik</span>
                   <div className={`flex items-center gap-2 px-4 py-1 rounded-full text-sm font-bold ${
-                    practiceStatus === 'ACTIVE' ? 'bg-green-500 text-white' : 'bg-gray-400 text-white'
+                    practiceStatus === 'ACTIVE' 
+                      ? 'bg-green-500 text-white' 
+                      : practiceStatus === 'EXPIRED'
+                      ? 'bg-red-500 text-white'
+                      : 'bg-gray-400 text-white'
                   }`}>
                     <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                    {practiceStatus === 'ACTIVE' ? 'AKTIF' : 'TIDAK AKTIF'}
+                    {practiceStatus === 'ACTIVE' ? 'AKTIF' : practiceStatus === 'EXPIRED' ? 'KADALUARSA' : 'TIDAK AKTIF'}
                   </div>
                 </div>
                 <div className="bg-yellow-50 p-3 rounded-lg">
                   <p className="text-sm text-yellow-800 font-medium">
-                    {practiceStatus === 'ACTIVE' ? 'Sedang Bertugas' : 'Lengkapi nomor SIP untuk mengaktifkan'}
+                    {practiceStatus === 'ACTIVE' 
+                      ? 'Sedang Bertugas' 
+                      : practiceStatus === 'EXPIRED'
+                      ? 'SIP telah kadaluarsa, segera perbarui'
+                      : 'Tidak Ada Jadwal Praktik'}
                   </p>
                 </div>
               </div>
@@ -203,7 +264,7 @@ export default function MedicalStaffProfile() {
 
                           <div className="bg-yellow-100 rounded-full h-3 overflow-hidden mb-2">
                             <div
-                              className="bg-linear-to-r from-yellow-400 to-yellow-500 h-full rounded-full"
+                              className="bg-linear-to-r from-yellow-400 to-yellow-500 h-full rounded-full transition-all duration-500"
                               style={{ width: `${sipRemaining.percentage}%` }}
                             />
                           </div>
@@ -218,6 +279,21 @@ export default function MedicalStaffProfile() {
                 </>
               )}
 
+              {schedules.length > 0 && (
+                <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border border-yellow-100">
+                  <p className="text-yellow-900 font-semibold mb-3">Jadwal Praktik Minggu Ini:</p>
+                  <div className="space-y-2">
+                    {schedules.map((schedule, index) => (
+                      <div key={index} className="flex items-center gap-2 text-sm">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="font-medium text-yellow-900">{schedule.day}:</span>
+                        <span className="text-yellow-700">{schedule.start} - {schedule.end}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <Button 
                 className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2"
                 onClick={() => window.location.href = '/dashboard/dokter/kalender'}
@@ -229,7 +305,7 @@ export default function MedicalStaffProfile() {
         </div>
 
         <p className="text-center text-sm text-[#EB5A88] mt-8">
-          © 2025 Klinik. Platform untuk klinik modern
+          © 2025 RoxyDental. Platform untuk klinik gigi modern
         </p>
       </div>
     </div>
@@ -237,10 +313,9 @@ export default function MedicalStaffProfile() {
 }
 
 function InfoItem({ label, value, icon }: { label: string; value: string; icon: string }) {
-  const iconMap: any = {
+  const iconMap: Record<string, React.ReactNode> = {
     id: <CreditCard className="w-5 h-5 text-pink-600" />,
     badge: <BadgeCheck className="w-5 h-5 text-pink-600" />,
-    file: <FileText className="w-5 h-5 text-pink-600" />,
     phone: <Phone className="w-5 h-5 text-pink-600" />,
     mail: <Mail className="w-5 h-5 text-pink-600" />,
     map: <MapPin className="w-5 h-5 text-pink-600" />,

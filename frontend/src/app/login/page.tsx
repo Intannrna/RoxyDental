@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { HiEye, HiEyeOff } from "react-icons/hi";
+import { authService } from "@/services/auth.service";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isAuthenticated, loading: authLoading } = useAuth();
 
   const [role, setRole] = useState<"DOKTER" | "PERAWAT">();
   const [username, setUsername] = useState("");
@@ -23,12 +22,6 @@ export default function LoginPage() {
     "/images/logo2.jpg",
     "/images/logo3.jpg",
   ];
-
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      router.push('/dashboard/dokter/main');
-    }
-  }, [isAuthenticated, authLoading, router]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -53,21 +46,21 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(username, password, role);
+      const response = await authService.login({ username, password, role });
+      
+      if (response.success) {
+        if (role === 'DOKTER') {
+          router.push('/dashboard/dokter/main');
+        } else {
+          router.push('/dashboard/perawat');
+        }
+      }
     } catch (err: any) {
-      setError(err.message || "Login gagal. Periksa kredensial Anda.");
+      setError(err.response?.data?.message || "Login gagal. Periksa kredensial Anda.");
     } finally {
       setLoading(false);
     }
   };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row">

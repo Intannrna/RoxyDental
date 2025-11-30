@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService, LoginData, RegisterData } from '@/services/auth.service';
-import { useRouter } from 'next/navigation';
 
 interface User {
   id: string;
@@ -29,7 +28,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
@@ -40,36 +38,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (username: string, password: string, role: 'DOKTER' | 'PERAWAT') => {
-    try {
-      const response = await authService.login({ username, password, role });
-      setUser(response.data.user);
-      
-      if (role === 'DOKTER') {
-        router.push('/dashboard/dokter/main');
-      } else {
-        router.push('/dashboard/perawat');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
+    const response = await authService.login({ username, password, role });
+    setUser(response.data.user);
   };
 
   const register = async (data: RegisterData) => {
-    try {
-      const response = await authService.register(data);
-      setUser(response.data.user);
-      router.push('/dashboard/dokter/main');
-    } catch (error) {
-      console.error('Register error:', error);
-      throw error;
-    }
+    const response = await authService.register(data);
+    setUser(response.data.user);
   };
 
   const logout = () => {
     authService.logout();
     setUser(null);
-    router.push('/login');
   };
 
   return (

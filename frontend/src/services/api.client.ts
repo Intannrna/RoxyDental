@@ -5,6 +5,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000,
 });
 
 apiClient.interceptors.request.use(
@@ -24,8 +25,9 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      console.error('Unauthorized - Token invalid or expired');
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      localStorage.removeItem('user');
     }
     return Promise.reject(error);
   }
