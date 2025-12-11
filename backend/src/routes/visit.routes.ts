@@ -9,6 +9,7 @@ const visitController = new VisitController();
 
 router.get('/', authMiddleware, visitController.getVisits);
 router.get('/queue', authMiddleware, visitController.getQueue);
+router.get('/completed', authMiddleware, visitController.getCompletedVisits);
 router.get('/:id', authMiddleware, visitController.getVisitById);
 router.post('/', authMiddleware, validate(createVisitSchema), visitController.createVisit);
 router.patch('/:id/status', authMiddleware, validate(updateVisitStatusSchema), visitController.updateVisitStatus);

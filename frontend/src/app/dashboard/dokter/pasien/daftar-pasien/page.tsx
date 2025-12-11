@@ -1,85 +1,85 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, PlusCircle } from "lucide-react";
+import { Search, Eye } from "lucide-react";
 import DoctorNavbar from "@/components/ui/navbardr";
 import { usePathname, useRouter } from "next/navigation";
-
-interface PatientType {
-  rmNo: string;
-  name: string;
-  dob: string;
-  gender: string;
-  visitDate: string;
-  tindakan: string;
-}
-
-interface TabType {
-  label: string;
-  value: string;
-  href: string;
-}
+import { visitService } from "@/services/visit.service";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PatientPage() {
   const pathname = usePathname();
   const router = useRouter();
+  const { toast } = useToast();
 
-  const tabs: TabType[] = [
-    {
-      label: "Daftar Pasien",
-      value: "daftar-pasien",
-      href: "/dashboard/dokter/pasien/daftar-pasien",
-    },
-    {
-      label: "Daftar Antrian",
-      value: "daftar-antrian",
-      href: "/dashboard/dokter/pasien/antrian",
-    },
-    {
-      label: "Rekam Medis",
-      value: "rekam-medis",
-      href: "/dashboard/dokter/pasien/rekam-medis",
-    },
+  const tabs = [
+    { label: "Daftar Pasien", value: "daftar-pasien", href: "/dashboard/dokter/pasien/daftar-pasien" },
+    { label: "Daftar Antrian", value: "daftar-antrian", href: "/dashboard/dokter/pasien/antrian" },
+    { label: "Rekam Medis", value: "rekam-medis", href: "/dashboard/dokter/pasien/rekam-medis" },
   ];
 
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 8;
+  const [visits, setVisits] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0
+  });
 
-  const patients: PatientType[] = Array.from({ length: 25 }).map((_, i) => ({
-    rmNo: i % 3 === 0 ? "-" : `008-0097${70 + i}`,
-    name: `Pasien ${i + 1}`,
-    dob: `19/0${(i % 9) + 1}/200${i % 5}`,
-    gender: i % 2 === 0 ? "Wanita" : "Pria",
-    visitDate: "Senin, 07 Juli 2025",
-    tindakan:
-      i % 2 === 0 ? "T5003 - Scaling Class 1" : "T5002 - Scaling Class 2",
-  }));
+  const fetchCompletedVisits = async () => {
+    setLoading(true);
+    try {
+      const response = await visitService.getCompletedVisits(currentPage, 10, searchQuery);
+      setVisits(response.data.visits);
+      setPagination(response.data.pagination);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Gagal mengambil data pasien",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filtered = patients.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.rmNo.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    fetchCompletedVisits();
+  }, [currentPage, searchQuery]);
 
-  const totalPages = Math.ceil(filtered.length / rowsPerPage);
-  const startIdx = (currentPage - 1) * rowsPerPage;
-  const currentPatients = filtered.slice(startIdx, startIdx + rowsPerPage);
+  const calculateAge = (dateOfBirth: string) => {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[#FDDCE7]">
       <DoctorNavbar />
-
       <div className="p-6 max-w-7xl mx-auto">
-
-        {/* ---------- TABS FIXED WITH ROUTING ---------- */}
         <div className="flex gap-3 mb-6">
           {tabs.map((tab) => {
             const isActive = pathname.includes(tab.value);
-
             return (
               <Link
                 key={tab.value}
@@ -96,20 +96,14 @@ export default function PatientPage() {
           })}
         </div>
 
-        {/* ---------- LAYOUT GRID ---------- */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-
-          {/* ---------- SEARCH SIDEBAR ---------- */}
           <div className="md:col-span-3 w-full">
             <div className="bg-white rounded-xl p-4 border border-pink-200 shadow-sm">
-              <h2 className="text-lg font-semibold text-pink-900 mb-3">
-                Daftar Pasien
-              </h2>
-
+              <h2 className="text-lg font-semibold text-pink-900 mb-3">Daftar Pasien</h2>
               <div className="relative">
                 <Search className="absolute left-3 top-3 text-pink-400 h-5 w-5" />
                 <Input
-                  placeholder="No. ID"
+                  placeholder="Cari pasien..."
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
@@ -118,87 +112,88 @@ export default function PatientPage() {
                   className="pl-10 border-pink-300 rounded-lg"
                 />
               </div>
-
-              <Button className="mt-3 w-full bg-pink-600 hover:bg-pink-700 text-white rounded-lg">
+              <Button 
+                onClick={() => fetchCompletedVisits()}
+                className="mt-3 w-full bg-pink-600 hover:bg-pink-700 text-white rounded-lg"
+              >
                 Cari
               </Button>
             </div>
           </div>
 
-          {/* ---------- TABLE ---------- */}
           <div className="md:col-span-9">
             <div className="bg-white rounded-xl shadow-md border border-pink-200 overflow-x-auto">
               <table className="w-full text-pink-900 min-w-[900px]">
                 <thead className="bg-pink-100">
                   <tr>
-                    {[
-                      "NO. ID",
-                      "NAMA",
-                      "J/K",
-                      "TGL. LAHIR (UMUR)",
-                      "TGL. KUNJUNGAN",
-                      "TINDAKAN",
-                      " ",
-                    ].map((h) => (
-                      <th
-                        key={h}
-                        className="text-left px-3 py-3 text-sm font-semibold"
-                      >
-                        {h}
-                      </th>
+                    {["NO. PASIEN", "NAMA", "J/K", "TGL. LAHIR (UMUR)", "TGL. KUNJUNGAN", "DIAGNOSIS", "AKSI"].map((h) => (
+                      <th key={h} className="text-left px-3 py-3 text-sm font-semibold">{h}</th>
                     ))}
                   </tr>
                 </thead>
-
                 <tbody>
-                  {currentPatients.map((p, i) => (
-                    <tr
-                      key={i}
-                      className="border-t border-pink-100 hover:bg-pink-50 transition"
-                    >
-                      <td className="px-3 py-3 whitespace-nowrap">{p.rmNo}</td>
-                      <td className="px-3 py-3">{p.name}</td>
-                      <td className="px-3 py-3">{p.gender}</td>
-                      <td className="px-3 py-3">{p.dob}</td>
-                      <td className="px-3 py-3">{p.visitDate}</td>
-                      <td className="px-3 py-3">{p.tindakan}</td>
-
-                      <td className="px-3 py-3 text-right">
-                        <button
-                          onClick={() =>
-                            router.push(`/rekam-medis/tambah?rm=${p.rmNo}`)
-                          }
-                          className="p-2 rounded-full hover:bg-pink-200 transition"
-                        >
-                          <PlusCircle className="h-5 w-5 text-pink-700" />
-                        </button>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="text-center py-8">
+                        <div className="flex justify-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : visits.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="text-center py-8 text-pink-600">
+                        Tidak ada data pasien
+                      </td>
+                    </tr>
+                  ) : (
+                    visits.map((visit, i) => (
+                      <tr key={i} className="border-t border-pink-100 hover:bg-pink-50 transition">
+                        <td className="px-3 py-3 whitespace-nowrap">{visit.patient.patientNumber}</td>
+                        <td className="px-3 py-3">{visit.patient.fullName}</td>
+                        <td className="px-3 py-3">{visit.patient.gender === 'L' ? 'Pria' : 'Wanita'}</td>
+                        <td className="px-3 py-3">
+                          {new Date(visit.patient.dateOfBirth).toLocaleDateString('id-ID')} ({calculateAge(visit.patient.dateOfBirth)} thn)
+                        </td>
+                        <td className="px-3 py-3">{formatDate(visit.visitDate)}</td>
+                        <td className="px-3 py-3">
+                          {visit.treatments && visit.treatments.length > 0 
+                            ? visit.treatments[0].diagnosis || '-'
+                            : '-'
+                          }
+                        </td>
+                        <td className="px-3 py-3 text-right">
+                          <button
+                            onClick={() => router.push(`/dashboard/dokter/pasien/detail/${visit.id}`)}
+                            className="p-2 rounded-full hover:bg-pink-200 transition"
+                          >
+                            <Eye className="h-5 w-5 text-pink-700" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
 
-            {/* ---------- PAGINATION ---------- */}
-            <div className="flex justify-center mt-6 gap-2 flex-wrap">
-              {Array.from({ length: totalPages }).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`px-4 py-2 text-sm rounded-md ${
-                    currentPage === i + 1
-                      ? "bg-pink-600 text-white"
-                      : "bg-white border border-pink-300 text-pink-700 hover:bg-pink-100"
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-
-              <button className="px-4 py-2 bg-white border border-pink-300 rounded-md text-pink-700 hover:bg-pink-100">
-                Akhir
-              </button>
-            </div>
+            {pagination.totalPages > 1 && (
+              <div className="flex justify-center mt-8 gap-2 flex-wrap">
+                {Array.from({ length: pagination.totalPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(i + 1)}
+                    className={`px-4 py-2 text-sm rounded-md border font-medium ${
+                      currentPage === i + 1
+                        ? "bg-pink-600 text-white border-pink-600"
+                        : "bg-white border border-pink-300 text-pink-700 hover:bg-pink-100"
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

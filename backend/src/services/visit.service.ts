@@ -28,10 +28,22 @@ interface CreateVisitInput {
 }
 
 export class VisitService {
-  async getVisits(page: number = 1, limit: number = 10, status?: VisitStatus) {
+  async getVisits(page: number = 1, limit: number = 10, status?: VisitStatus, search?: string) {
     const skip = (page - 1) * limit;
-
-    const where = status ? { status } : {};
+    
+    const where: any = {};
+    
+    if (status) {
+      where.status = status;
+    }
+    
+    if (search) {
+      where.OR = [
+        { visitNumber: { contains: search, mode: 'insensitive' } },
+        { patient: { fullName: { contains: search, mode: 'insensitive' } } },
+        { patient: { patientNumber: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
 
     const [visits, total] = await Promise.all([
       prisma.visit.findMany({
@@ -43,7 +55,8 @@ export class VisitService {
               patientNumber: true,
               fullName: true,
               phone: true,
-              gender: true
+              gender: true,
+              dateOfBirth: true
             }
           },
           nurse: {
@@ -120,7 +133,16 @@ export class VisitService {
         throw new AppError('Pasien tidak ditemukan', 404);
       }
     } else {
-      const patientNumber = `P${Date.now()}`;
+      const lastPatient = await prisma.patient.findFirst({
+        orderBy: { createdAt: 'desc' }
+      });
+
+      const lastNumber = lastPatient?.patientNumber 
+        ? parseInt(lastPatient.patientNumber.split('-')[1]) 
+        : 0;
+      
+      const patientNumber = `P-${String(lastNumber + 1).padStart(6, '0')}`;
+
       patientRecord = await prisma.patient.create({
         data: {
           patientNumber,
@@ -141,9 +163,11 @@ export class VisitService {
       orderBy: { createdAt: 'desc' }
     });
 
-    const visitNumber = lastVisit
-      ? `V${parseInt(lastVisit.visitNumber.substring(1)) + 1}`
-      : 'V1000';
+    const lastVisitNumber = lastVisit?.visitNumber 
+      ? parseInt(lastVisit.visitNumber.split('-')[1]) 
+      : 0;
+    
+    const visitNumber = `V-${String(lastVisitNumber + 1).padStart(6, '0')}`;
 
     const queueNumber = await this.getNextQueueNumber();
 
@@ -191,21 +215,31 @@ export class VisitService {
     return lastQueue ? lastQueue.queueNumber + 1 : 1;
   }
 
-  async getQueue() {
+  async getQueue(search?: string) {
     const today = new Date();
     const startOfDay = new Date(today.setHours(0, 0, 0, 0));
     const endOfDay = new Date(today.setHours(23, 59, 59, 999));
 
-    const queue = await prisma.visit.findMany({
-      where: {
-        visitDate: {
-          gte: startOfDay,
-          lte: endOfDay
-        },
-        status: {
-          in: [VisitStatus.WAITING, VisitStatus.IN_PROGRESS]
-        }
+    const where: any = {
+      visitDate: {
+        gte: startOfDay,
+        lte: endOfDay
       },
+      status: {
+        in: [VisitStatus.WAITING, VisitStatus.IN_PROGRESS]
+      }
+    };
+
+    if (search) {
+      where.OR = [
+        { visitNumber: { contains: search, mode: 'insensitive' } },
+        { patient: { fullName: { contains: search, mode: 'insensitive' } } },
+        { patient: { patientNumber: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+
+    const queue = await prisma.visit.findMany({
+      where,
       include: {
         patient: {
           select: {
@@ -213,6 +247,12 @@ export class VisitService {
             patientNumber: true,
             fullName: true,
             phone: true
+          }
+        },
+        nurse: {
+          select: {
+            id: true,
+            fullName: true
           }
         }
       },
@@ -225,25 +265,87 @@ export class VisitService {
   }
 
   async updateVisitStatus(id: string, status: VisitStatus) {
-  const visit = await prisma.visit.findUnique({
-    where: { id }
-  });
+    const visit = await prisma.visit.findUnique({
+      where: { id }
+    });
 
-  if (!visit) {
-    throw new AppError('Kunjungan tidak ditemukan', 404);
-  }
+    if (!visit) {
+      throw new AppError('Kunjungan tidak ditemukan', 404);
+    }
 
-  const updatedVisit = await prisma.visit.update({
-    where: { id },
-    data: { status },
-    include: {
-      patient: {
-        select: {
-          fullName: true
+    const updatedVisit = await prisma.visit.update({
+      where: { id },
+      data: { status },
+      include: {
+        patient: {
+          select: {
+            fullName: true
+          }
         }
       }
-    }
-  });
+    });
 
-  return updatedVisit;
-}}
+    return updatedVisit;
+  }
+
+  async getCompletedVisits(page: number = 1, limit: number = 10, search?: string) {
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      status: VisitStatus.COMPLETED
+    };
+
+    if (search) {
+      where.OR = [
+        { visitNumber: { contains: search, mode: 'insensitive' } },
+        { patient: { fullName: { contains: search, mode: 'insensitive' } } },
+        { patient: { patientNumber: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+
+    const [visits, total] = await Promise.all([
+      prisma.visit.findMany({
+        where,
+        include: {
+          patient: {
+            select: {
+              id: true,
+              patientNumber: true,
+              fullName: true,
+              dateOfBirth: true,
+              gender: true,
+              phone: true
+            }
+          },
+          treatments: {
+            select: {
+              id: true,
+              diagnosis: true,
+              service: {
+                select: {
+                  serviceName: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: {
+          visitDate: 'desc'
+        },
+        skip,
+        take: limit
+      }),
+      prisma.visit.count({ where })
+    ]);
+
+    return {
+      visits,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  }
+}

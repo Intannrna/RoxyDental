@@ -8,11 +8,12 @@ const visitService = new VisitService();
 export class VisitController {
   async getVisits(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { page, limit, status } = req.query;
+      const { page, limit, status, search } = req.query;
       const result = await visitService.getVisits(
         Number(page) || 1,
         Number(limit) || 10,
-        status as any
+        status as any,
+        search as string
       );
       res.json(successResponse('Daftar kunjungan berhasil diambil', result));
     } catch (error) {
@@ -40,7 +41,8 @@ export class VisitController {
 
   async getQueue(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const queue = await visitService.getQueue();
+      const { search } = req.query;
+      const queue = await visitService.getQueue(search as string);
       res.json(successResponse('Daftar antrian berhasil diambil', queue));
     } catch (error) {
       next(error);
@@ -48,12 +50,26 @@ export class VisitController {
   }
 
   async updateVisitStatus(req: AuthRequest, res: Response, next: NextFunction) {
-  try {
-    const { status } = req.body;
-    const visit = await visitService.updateVisitStatus(req.params.id, status);
-    res.json(successResponse('Status kunjungan berhasil diupdate', visit));
-  } catch (error) {
-    next(error);
+    try {
+      const { status } = req.body;
+      const visit = await visitService.updateVisitStatus(req.params.id, status);
+      res.json(successResponse('Status kunjungan berhasil diupdate', visit));
+    } catch (error) {
+      next(error);
+    }
   }
-}
+
+  async getCompletedVisits(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { page, limit, search } = req.query;
+      const result = await visitService.getCompletedVisits(
+        Number(page) || 1,
+        Number(limit) || 10,
+        search as string
+      );
+      res.json(successResponse('Daftar pasien berhasil diambil', result));
+    } catch (error) {
+      next(error);
+    }
+  }
 }
