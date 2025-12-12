@@ -1,19 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Eye } from "lucide-react";
+import { Search } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
 import DoctorNavbar from "@/components/ui/navbarpr";
-import { usePathname, useRouter } from "next/navigation";
-import { visitService } from "@/services/visit.service";
+import { patientService } from "@/services/patient.service";
 import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
 
-export default function PatientPage() {
-  const pathname = usePathname();
+export default function PatientListPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [patients, setPatients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const tabs = [
     { label: "Daftar Pasien", value: "daftar-pasien", href: "/dashboard/perawat/pasienpr/daftar-pasien" },
@@ -21,90 +25,100 @@ export default function PatientPage() {
     { label: "Rekam Medis", value: "rekam-medis", href: "/dashboard/perawat/pasienpr/rekam-medis" },
   ];
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [visits, setVisits] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [pagination, setPagination] = useState({
-    total: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 0
-  });
-
-  const fetchCompletedVisits = async () => {
+  const fetchPatients = async () => {
+    console.log('=== FETCH PATIENTS CALLED ===');
     setLoading(true);
     try {
-      const response = await visitService.getCompletedVisits(currentPage, 10, searchQuery);
+      const response = await patientService.getPatients(1, 100, searchQuery);
+      console.log('Service response:', response);
       
-      if (response.success && response.data) {
-        setVisits(response.data.visits || []);
-        setPagination(response.data.pagination || {
-          total: 0,
-          page: 1,
-          limit: 10,
-          totalPages: 0
-        });
-      } else {
-        setVisits([]);
-        setPagination({
-          total: 0,
-          page: 1,
-          limit: 10,
-          totalPages: 0
-        });
+      let patientData = [];
+      
+      if (Array.isArray(response)) {
+        patientData = response;
+        console.log('Response is array');
+      } else if (response.data && Array.isArray(response.data)) {
+        patientData = response.data;
+        console.log('Using response.data');
+      } else if (response.patients && Array.isArray(response.patients)) {
+        patientData = response.patients;
+        console.log('Using response.patients');
       }
+      
+      console.log('Final patient data:', patientData);
+      console.log('Patient count:', patientData.length);
+      
+      setPatients(patientData);
     } catch (error: any) {
-      console.error('Error fetching completed visits:', error);
+      console.error('Error in fetchPatients:', error);
       toast({
         title: "Error",
         description: error.response?.data?.message || "Gagal mengambil data pasien",
         variant: "destructive"
       });
-      setVisits([]);
+      setPatients([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCompletedVisits();
-  }, [currentPage, searchQuery]);
+    console.log('Component mounted or searchQuery changed:', searchQuery);
+    fetchPatients();
+  }, [searchQuery]);
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return '-';
+    }
+  };
 
   const calculateAge = (dateOfBirth: string) => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+    try {
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    } catch {
+      return '-';
     }
-    return age;
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    });
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchPatients();
   };
+
+  console.log('Current patients state:', patients);
+  console.log('Is array?', Array.isArray(patients));
+  console.log('Length:', patients.length);
 
   return (
-    <div className="min-h-screen bg-[#FDDCE7]">
+    <div className="min-h-screen bg-[#FFF5F7]">
       <DoctorNavbar />
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="flex gap-3 mb-6">
+
+      <div className="pt-6 px-6 max-w-7xl mx-auto space-y-6">
+        <div className="flex gap-4 mb-4">
           {tabs.map((tab) => {
             const isActive = pathname.includes(tab.value);
             return (
               <Link
                 key={tab.value}
                 href={tab.href}
-                className={`px-4 py-2 rounded-full font-medium transition shadow-sm ${
+                className={`px-4 py-2 rounded-full font-medium transition ${
                   isActive
                     ? "bg-pink-600 text-white shadow-md"
-                    : "bg-white border border-pink-300 text-pink-700 hover:bg-pink-50"
+                    : "bg-white border border-pink-200 text-pink-600 hover:bg-pink-50"
                 }`}
               >
                 {tab.label}
@@ -113,107 +127,80 @@ export default function PatientPage() {
           })}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          <div className="md:col-span-3 w-full">
-            <div className="bg-white rounded-xl p-4 border border-pink-200 shadow-sm">
-              <h2 className="text-lg font-semibold text-pink-900 mb-3">Daftar Pasien</h2>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 text-pink-400 h-5 w-5" />
+        <div className="flex items-start gap-6">
+          <div className="bg-white rounded-lg shadow-md p-6 w-80">
+            <h2 className="text-lg font-bold text-pink-900 mb-4">Daftar Pasien</h2>
+            <form onSubmit={handleSearch}>
+              <div className="flex items-center gap-2 mb-4">
+                <Search className="w-5 h-5 text-pink-400" />
                 <Input
                   placeholder="Cari pasien..."
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="pl-10 border-pink-300 rounded-lg"
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 border border-pink-200"
                 />
               </div>
               <Button 
-                onClick={() => fetchCompletedVisits()}
-                className="mt-3 w-full bg-pink-600 hover:bg-pink-700 text-white rounded-lg"
+                type="submit"
+                className="w-full bg-pink-600 text-white hover:bg-pink-700"
               >
                 Cari
               </Button>
-            </div>
+            </form>
           </div>
 
-          <div className="md:col-span-9">
-            <div className="bg-white rounded-xl shadow-md border border-pink-200 overflow-x-auto">
-              <table className="w-full text-pink-900 min-w-[900px]">
-                <thead className="bg-pink-100">
+          <div className="flex-1 overflow-x-auto rounded-lg shadow-md bg-white border border-pink-100">
+            <table className="min-w-full divide-y divide-pink-200 text-pink-900">
+              <thead className="bg-pink-100">
+                <tr>
+                  {["NO. PASIEN", "NAMA", "J/K", "TGL. LAHIR (UMUR)", "TGL. KUNJUNGAN", "TINDAKAN"].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left font-semibold text-sm">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-pink-100">
+                {loading ? (
                   <tr>
-                    {["NO. PASIEN", "NAMA", "J/K", "TGL. LAHIR (UMUR)", "TGL. KUNJUNGAN", "DIAGNOSIS", "AKSI"].map((h) => (
-                      <th key={h} className="text-left px-3 py-3 text-sm font-semibold">{h}</th>
-                    ))}
+                    <td colSpan={6} className="text-center py-8">
+                      <div className="flex justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-8">
-                        <div className="flex justify-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : visits.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-8 text-pink-600">
-                        Tidak ada data pasien
-                      </td>
-                    </tr>
-                  ) : (
-                    visits.map((visit, i) => (
-                      <tr key={i} className="border-t border-pink-100 hover:bg-pink-50 transition">
-                        <td className="px-3 py-3 whitespace-nowrap">{visit.patient?.patientNumber || '-'}</td>
-                        <td className="px-3 py-3">{visit.patient?.fullName || '-'}</td>
-                        <td className="px-3 py-3">{visit.patient?.gender === 'L' ? 'Pria' : 'Wanita'}</td>
-                        <td className="px-3 py-3">
-                          {visit.patient?.dateOfBirth ? 
-                            `${new Date(visit.patient.dateOfBirth).toLocaleDateString('id-ID')} (${calculateAge(visit.patient.dateOfBirth)} thn)` 
-                            : '-'
-                          }
+                ) : !Array.isArray(patients) || patients.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-pink-600">
+                      Tidak ada data pasien (Total: {patients.length})
+                    </td>
+                  </tr>
+                ) : (
+                  patients.map((patient, index) => {
+                    console.log(`Rendering patient ${index}:`, patient);
+                    return (
+                      <tr key={patient.id || index} className="hover:bg-pink-50">
+                        <td className="px-4 py-3">{patient.patientNumber || '-'}</td>
+                        <td className="px-4 py-3 font-medium">{patient.fullName || '-'}</td>
+                        <td className="px-4 py-3">{patient.gender === 'L' ? 'Pria' : 'Wanita'}</td>
+                        <td className="px-4 py-3">
+                          {patient.dateOfBirth ? `${formatDate(patient.dateOfBirth)} (${calculateAge(patient.dateOfBirth)})` : '-'}
                         </td>
-                        <td className="px-3 py-3">{formatDate(visit.visitDate)}</td>
-                        <td className="px-3 py-3">
-                          {visit.treatments && visit.treatments.length > 0 
-                            ? visit.treatments[0].diagnosis || '-'
-                            : '-'
-                          }
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          <button
-                            onClick={() => router.push(`/dashboard/perawat/pasienpr/rekam-medis/${visit.id}`)}
-                            className="p-2 rounded-full hover:bg-pink-200 transition"
+                        <td className="px-4 py-3">{patient.lastVisit ? formatDate(patient.lastVisit) : '-'}</td>
+                        <td className="px-4 py-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-pink-600 border-pink-300 hover:bg-pink-50"
+                            onClick={() => router.push(`/dashboard/perawat/pasienpr/daftar-pasien/${patient.id}`)}
                           >
-                            <Eye className="h-5 w-5 text-pink-700" />
-                          </button>
+                            Lihat Detail
+                          </Button>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {pagination.totalPages > 1 && (
-              <div className="flex justify-center mt-8 gap-2 flex-wrap">
-                {Array.from({ length: pagination.totalPages }).map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentPage(i + 1)}
-                    className={`px-4 py-2 text-sm rounded-md border font-medium ${
-                      currentPage === i + 1
-                        ? "bg-pink-600 text-white border-pink-600"
-                        : "bg-white border border-pink-300 text-pink-700 hover:bg-pink-100"
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
-            )}
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

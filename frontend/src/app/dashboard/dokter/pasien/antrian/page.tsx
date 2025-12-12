@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import DoctorNavbar from "@/components/ui/navbardr";
@@ -29,13 +28,15 @@ export default function QueuePage() {
     setLoading(true);
     try {
       const response = await visitService.getQueue(searchQuery);
-      setQueues(response.data);
+      setQueues(response.data || response.visits || []);
     } catch (error: any) {
+      console.error('Error fetching queue:', error);
       toast({
         title: "Error",
         description: error.response?.data?.message || "Gagal mengambil data antrian",
         variant: "destructive"
       });
+      setQueues([]);
     } finally {
       setLoading(false);
     }
@@ -43,6 +44,8 @@ export default function QueuePage() {
 
   useEffect(() => {
     fetchQueue();
+    const interval = setInterval(fetchQueue, 10000);
+    return () => clearInterval(interval);
   }, [searchQuery]);
 
   const getStatusBadge = (status: string) => {
@@ -56,10 +59,14 @@ export default function QueuePage() {
   };
 
   const formatTime = (date: string) => {
-    return new Date(date).toLocaleTimeString('id-ID', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      return new Date(date).toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return '-';
+    }
   };
 
   return (
@@ -130,10 +137,10 @@ export default function QueuePage() {
                   return (
                     <tr key={idx} className="hover:bg-pink-50">
                       <td className="px-4 py-2">{queue.queueNumber}</td>
-                      <td className="px-4 py-2">{queue.patient.patientNumber}</td>
-                      <td className="px-4 py-2 font-medium">{queue.patient.fullName}</td>
+                      <td className="px-4 py-2">{queue.patient?.patientNumber || '-'}</td>
+                      <td className="px-4 py-2 font-medium">{queue.patient?.fullName || '-'}</td>
                       <td className="px-4 py-2">{formatTime(queue.visitDate)}</td>
-                      <td className="px-4 py-2">{queue.nurse.fullName}</td>
+                      <td className="px-4 py-2">{queue.nurse?.fullName || '-'}</td>
                       <td className="px-4 py-2">{queue.chiefComplaint || '-'}</td>
                       <td className="px-4 py-2">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusInfo.class}`}>

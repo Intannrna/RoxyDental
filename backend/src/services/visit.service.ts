@@ -29,31 +29,26 @@ interface CreateVisitInput {
 
 export class VisitService {
   private async generatePatientNumber(): Promise<string> {
-    const lastPatient = await prisma.patient.findFirst({
-      orderBy: { createdAt: 'desc' }
-    });
-
-    if (!lastPatient || !lastPatient.patientNumber) {
-      return 'P-000001';
-    }
-
-    const lastNumber = parseInt(lastPatient.patientNumber.split('-')[1]);
-    const newNumber = lastNumber + 1;
-    return `P-${String(newNumber).padStart(6, '0')}`;
+    const count = await prisma.patient.count();
+    return `P-${String(count + 1).padStart(6, '0')}`;
   }
 
   private async generateVisitNumber(): Promise<string> {
-    const lastVisit = await prisma.visit.findFirst({
-      orderBy: { createdAt: 'desc' }
+    const today = new Date();
+    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+
+    const todayCount = await prisma.visit.count({
+      where: {
+        createdAt: {
+          gte: startOfDay,
+          lte: endOfDay
+        }
+      }
     });
 
-    if (!lastVisit || !lastVisit.visitNumber) {
-      return 'V-000001';
-    }
-
-    const lastNumber = parseInt(lastVisit.visitNumber.split('-')[1]);
-    const newNumber = lastNumber + 1;
-    return `V-${String(newNumber).padStart(6, '0')}`;
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    return `V-${dateStr}-${String(todayCount + 1).padStart(4, '0')}`;
   }
 
   private async getNextQueueNumber(): Promise<number> {
@@ -153,6 +148,9 @@ export class VisitService {
                 fullName: true
               }
             }
+          },
+          orderBy: {
+            createdAt: 'desc'
           }
         },
         payments: true
@@ -348,7 +346,11 @@ export class VisitService {
                   serviceName: true
                 }
               }
-            }
+            },
+            orderBy: {
+              createdAt: 'desc'
+            },
+            take: 1
           }
         },
         orderBy: {

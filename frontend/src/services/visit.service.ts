@@ -59,20 +59,13 @@ export interface VisitListResponse {
 }
 
 export const visitService = {
-  async getVisits(page: number = 1, limit: number = 10, status?: string, search?: string) {
-    const params: any = { page, limit };
-    if (status) params.status = status;
-    if (search) params.search = search;
-    
-    const response = await apiClient.get('/doctor/visits', { params });
-    return response.data;
-  },
-
   async getQueue(search?: string) {
     const params = search ? { search } : {};
     const response = await apiClient.get('/doctor/visits/queue', { params });
     return response.data;
   },
+
+
 
   async getCompletedVisits(page: number = 1, limit: number = 10, search?: string) {
     const params: any = { page, limit };

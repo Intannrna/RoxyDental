@@ -29,13 +29,15 @@ export default function QueuePage() {
     setLoading(true);
     try {
       const response = await visitService.getQueue(searchQuery);
-      setQueues(response.data);
+      setQueues(response.data || response.visits || []);
     } catch (error: any) {
+      console.error('Error fetching queue:', error);
       toast({
         title: "Error",
         description: error.response?.data?.message || "Gagal mengambil data antrian",
         variant: "destructive"
       });
+      setQueues([]);
     } finally {
       setLoading(false);
     }
@@ -43,6 +45,8 @@ export default function QueuePage() {
 
   useEffect(() => {
     fetchQueue();
+    const interval = setInterval(fetchQueue, 10000);
+    return () => clearInterval(interval);
   }, [searchQuery]);
 
   const handleStatusChange = async (visitId: string, newStatus: string) => {
@@ -54,6 +58,7 @@ export default function QueuePage() {
       });
       fetchQueue();
     } catch (error: any) {
+      console.error('Error updating status:', error);
       toast({
         title: "Error",
         description: error.response?.data?.message || "Gagal mengubah status",
@@ -76,10 +81,14 @@ export default function QueuePage() {
   };
 
   const formatTime = (date: string) => {
-    return new Date(date).toLocaleTimeString('id-ID', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      return new Date(date).toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return '-';
+    }
   };
 
   return (
@@ -155,8 +164,8 @@ export default function QueuePage() {
                 queues.map((q) => (
                   <tr key={q.id} className="hover:bg-pink-50">
                     <td className="px-4 py-3">{q.queueNumber}</td>
-                    <td className="px-4 py-3">{q.patient.patientNumber}</td>
-                    <td className="px-4 py-3">{q.patient.fullName}</td>
+                    <td className="px-4 py-3">{q.patient?.patientNumber || '-'}</td>
+                    <td className="px-4 py-3">{q.patient?.fullName || '-'}</td>
                     <td className="px-4 py-3">{formatTime(q.visitDate)}</td>
                     <td className="px-4 py-3">{q.chiefComplaint || '-'}</td>
                     <td className="px-4 py-3">
