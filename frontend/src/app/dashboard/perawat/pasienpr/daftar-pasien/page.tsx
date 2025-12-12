@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import DoctorNavbar from "@/components/ui/navbarpr";
-import { patientService } from "@/services/patient.service";
+import { visitService } from "@/services/visit.service";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
@@ -26,35 +26,37 @@ export default function PatientListPage() {
   ];
 
   const fetchPatients = async () => {
-    console.log('=== FETCH PATIENTS CALLED ===');
     setLoading(true);
     try {
-      const response = await patientService.getPatients(1, 100, searchQuery);
-      console.log('Service response:', response);
-      
-      let patientData = [];
-      
-      if (Array.isArray(response)) {
-        patientData = response;
-        console.log('Response is array');
-      } else if (response.data && Array.isArray(response.data)) {
-        patientData = response.data;
-        console.log('Using response.data');
-      } else if (response.patients && Array.isArray(response.patients)) {
-        patientData = response.patients;
-        console.log('Using response.patients');
-      }
-      
-      console.log('Final patient data:', patientData);
-      console.log('Patient count:', patientData.length);
-      
-      setPatients(patientData);
+      const response = await visitService.getCompletedVisits(1, 100, searchQuery);
+      const visits =
+        response?.data?.visits ||
+        response?.data ||
+        response?.visits ||
+        [];
+
+      const uniquePatients = visits.reduce((acc: any[], visit: any) => {
+        if (!visit?.patient) {
+          return acc;
+        }
+        if (!acc.find((p) => p.id === visit.patient.id)) {
+          acc.push({
+            ...visit.patient,
+            lastVisit: visit.visitDate,
+            visitId: visit.id,
+            chiefComplaint: visit.chiefComplaint,
+          });
+        }
+        return acc;
+      }, []);
+
+      setPatients(uniquePatients);
     } catch (error: any) {
-      console.error('Error in fetchPatients:', error);
+      console.error("Error fetching patients:", error);
       toast({
         title: "Error",
         description: error.response?.data?.message || "Gagal mengambil data pasien",
-        variant: "destructive"
+        variant: "destructive",
       });
       setPatients([]);
     } finally {
@@ -63,19 +65,18 @@ export default function PatientListPage() {
   };
 
   useEffect(() => {
-    console.log('Component mounted or searchQuery changed:', searchQuery);
     fetchPatients();
   }, [searchQuery]);
 
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString('id-ID', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
+      return new Date(dateString).toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
       });
     } catch {
-      return '-';
+      return "-";
     }
   };
 
@@ -90,7 +91,7 @@ export default function PatientListPage() {
       }
       return age;
     } catch {
-      return '-';
+      return "-";
     }
   };
 
@@ -98,10 +99,6 @@ export default function PatientListPage() {
     e.preventDefault();
     fetchPatients();
   };
-
-  console.log('Current patients state:', patients);
-  console.log('Is array?', Array.isArray(patients));
-  console.log('Length:', patients.length);
 
   return (
     <div className="min-h-screen bg-[#FFF5F7]">
@@ -140,7 +137,7 @@ export default function PatientListPage() {
                   className="flex-1 border border-pink-200"
                 />
               </div>
-              <Button 
+              <Button
                 type="submit"
                 className="w-full bg-pink-600 text-white hover:bg-pink-700"
               >
@@ -154,7 +151,9 @@ export default function PatientListPage() {
               <thead className="bg-pink-100">
                 <tr>
                   {["NO. PASIEN", "NAMA", "J/K", "TGL. LAHIR (UMUR)", "TGL. KUNJUNGAN", "TINDAKAN"].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left font-semibold text-sm">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left font-semibold text-sm">
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -163,41 +162,37 @@ export default function PatientListPage() {
                   <tr>
                     <td colSpan={6} className="text-center py-8">
                       <div className="flex justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600" />
                       </div>
                     </td>
                   </tr>
-                ) : !Array.isArray(patients) || patients.length === 0 ? (
+                ) : patients.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-pink-600">
-                      Tidak ada data pasien (Total: {patients.length})
+                      Tidak ada data pasien
                     </td>
                   </tr>
                 ) : (
-                  patients.map((patient, index) => {
-                    console.log(`Rendering patient ${index}:`, patient);
-                    return (
-                      <tr key={patient.id || index} className="hover:bg-pink-50">
-                        <td className="px-4 py-3">{patient.patientNumber || '-'}</td>
-                        <td className="px-4 py-3 font-medium">{patient.fullName || '-'}</td>
-                        <td className="px-4 py-3">{patient.gender === 'L' ? 'Pria' : 'Wanita'}</td>
-                        <td className="px-4 py-3">
-                          {patient.dateOfBirth ? `${formatDate(patient.dateOfBirth)} (${calculateAge(patient.dateOfBirth)})` : '-'}
-                        </td>
-                        <td className="px-4 py-3">{patient.lastVisit ? formatDate(patient.lastVisit) : '-'}</td>
-                        <td className="px-4 py-3">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-pink-600 border-pink-300 hover:bg-pink-50"
-                            onClick={() => router.push(`/dashboard/perawat/pasienpr/daftar-pasien/${patient.id}`)}
-                          >
-                            Lihat Detail
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })
+                  patients.map((patient) => (
+                    <tr key={patient.id} className="hover:bg-pink-50">
+                      <td className="px-4 py-3">{patient.patientNumber || "-"}</td>
+                      <td className="px-4 py-3 font-medium">{patient.fullName || "-"}</td>
+                      <td className="px-4 py-3">{patient.gender === "L" ? "Pria" : "Wanita"}</td>
+                      <td className="px-4 py-3">
+                        {patient.dateOfBirth
+                          ? `${formatDate(patient.dateOfBirth)} (${calculateAge(patient.dateOfBirth)})`
+                          : "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {patient.lastVisit ? formatDate(patient.lastVisit) : "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {patient.chiefComplaint && patient.chiefComplaint.trim() !== ""
+                          ? patient.chiefComplaint
+                          : "-"}
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>

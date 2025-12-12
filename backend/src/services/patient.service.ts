@@ -5,15 +5,15 @@ export class PatientService {
   async getPatients(page: number = 1, limit: number = 10, search?: string) {
     const skip = (page - 1) * limit;
 
-    const where = search
-      ? {
-          OR: [
-            { fullName: { contains: search, mode: 'insensitive' as const } },
-            { patientNumber: { contains: search, mode: 'insensitive' as const } },
-            { phone: { contains: search } }
-          ]
-        }
-      : {};
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { fullName: { contains: search, mode: 'insensitive' as const } },
+        { patientNumber: { contains: search, mode: 'insensitive' as const } },
+        { phone: { contains: search } }
+      ];
+    }
 
     const [patients, total] = await Promise.all([
       prisma.patient.findMany({
@@ -27,9 +27,16 @@ export class PatientService {
           phone: true,
           email: true,
           createdAt: true,
-          _count: {
+          visits: {
+            where: {
+              status: 'COMPLETED'
+            },
+            orderBy: {
+              visitDate: 'desc'
+            },
+            take: 1,
             select: {
-              visits: true
+              visitDate: true
             }
           }
         },
@@ -42,13 +49,19 @@ export class PatientService {
       prisma.patient.count({ where })
     ]);
 
+    const patientsWithVisit = patients.filter(p => p.visits.length > 0).map(p => ({
+      ...p,
+      lastVisit: p.visits[0]?.visitDate,
+      visits: undefined
+    }));
+
     return {
-      patients,
+      patients: patientsWithVisit,
       pagination: {
-        total,
+        total: patientsWithVisit.length,
         page,
         limit,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(patientsWithVisit.length / limit)
       }
     };
   }
@@ -58,6 +71,9 @@ export class PatientService {
       where: { id },
       include: {
         visits: {
+          where: {
+            status: 'COMPLETED'
+          },
           include: {
             nurse: {
               select: {

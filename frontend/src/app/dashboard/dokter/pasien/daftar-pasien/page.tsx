@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { Search, PlusCircle } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import DoctorNavbar from "@/components/ui/navbardr";
-import { patientService } from "@/services/patient.service";
+import { visitService } from "@/services/visit.service";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
@@ -28,24 +28,27 @@ export default function PatientListPage() {
   const fetchPatients = async () => {
     setLoading(true);
     try {
-      const response = await patientService.getPatients(1, 100, searchQuery);
-      
-      let patientData = [];
-      if (Array.isArray(response)) {
-        patientData = response;
-      } else if (response.data && Array.isArray(response.data)) {
-        patientData = response.data;
-      } else if (response.patients && Array.isArray(response.patients)) {
-        patientData = response.patients;
-      }
-      
-      setPatients(patientData);
+      const response = await visitService.getCompletedVisits(1, 100, searchQuery);
+      const visits = response.data?.visits || [];
+
+      const uniquePatients = visits.reduce((acc: any[], visit: any) => {
+        if (!acc.find((p) => p.id === visit.patient.id)) {
+          acc.push({
+            ...visit.patient,
+            lastVisit: visit.visitDate,
+            visitId: visit.id,
+            chiefComplaint: visit.chiefComplaint,
+          });
+        }
+        return acc;
+      }, []);
+
+      setPatients(uniquePatients);
     } catch (error: any) {
-      console.error('Error fetching patients:', error);
       toast({
         title: "Error",
         description: error.response?.data?.message || "Gagal mengambil data pasien",
-        variant: "destructive"
+        variant: "destructive",
       });
       setPatients([]);
     } finally {
@@ -59,13 +62,13 @@ export default function PatientListPage() {
 
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString('id-ID', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
+      return new Date(dateString).toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
       });
     } catch {
-      return '-';
+      return "-";
     }
   };
 
@@ -80,7 +83,7 @@ export default function PatientListPage() {
       }
       return age;
     } catch {
-      return '-';
+      return "-";
     }
   };
 
@@ -94,6 +97,7 @@ export default function PatientListPage() {
       <DoctorNavbar />
 
       <div className="pt-6 px-6 max-w-7xl mx-auto space-y-6">
+        {/* Tabs */}
         <div className="flex gap-4 mb-4">
           {tabs.map((tab) => {
             const isActive = pathname.includes(tab.value);
@@ -114,6 +118,7 @@ export default function PatientListPage() {
         </div>
 
         <div className="flex items-start gap-6">
+          {/* Search Card */}
           <div className="bg-white rounded-lg shadow-md p-6 w-80">
             <h2 className="text-lg font-bold text-pink-900 mb-4">Daftar Pasien</h2>
             <form onSubmit={handleSearch}>
@@ -126,34 +131,42 @@ export default function PatientListPage() {
                   className="flex-1 border border-pink-200"
                 />
               </div>
-              <Button 
-                type="submit"
-                className="w-full bg-pink-600 text-white hover:bg-pink-700"
-              >
+              <Button type="submit" className="w-full bg-pink-600 text-white hover:bg-pink-700">
                 Cari
               </Button>
             </form>
           </div>
 
+          {/* Table */}
           <div className="flex-1 overflow-x-auto rounded-lg shadow-md bg-white border border-pink-100">
             <table className="min-w-full divide-y divide-pink-200 text-pink-900">
               <thead className="bg-pink-100">
                 <tr>
-                  {["NO. PASIEN", "NAMA", "J/K", "TGL. LAHIR (UMUR)", "TGL. KUNJUNGAN", "TINDAKAN"].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left font-semibold text-sm">{h}</th>
+                  {[
+                    "NO. PASIEN",
+                    "NAMA",
+                    "J/K",
+                    "TGL. LAHIR (UMUR)",
+                    "TGL. KUNJUNGAN",
+                    "TINDAKAN",
+                  ].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left font-semibold text-sm">
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-pink-100">
                 {loading ? (
                   <tr>
                     <td colSpan={6} className="text-center py-8">
                       <div className="flex justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600" />
                       </div>
                     </td>
                   </tr>
-                ) : !Array.isArray(patients) || patients.length === 0 ? (
+                ) : patients.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-pink-600">
                       Tidak ada data pasien
@@ -162,22 +175,39 @@ export default function PatientListPage() {
                 ) : (
                   patients.map((patient) => (
                     <tr key={patient.id} className="hover:bg-pink-50">
-                      <td className="px-4 py-3">{patient.patientNumber || '-'}</td>
-                      <td className="px-4 py-3 font-medium">{patient.fullName || '-'}</td>
-                      <td className="px-4 py-3">{patient.gender === 'L' ? 'Pria' : 'Wanita'}</td>
+                      <td className="px-4 py-3">{patient.patientNumber || "-"}</td>
+                      <td className="px-4 py-3 font-medium">{patient.fullName || "-"}</td>
                       <td className="px-4 py-3">
-                        {patient.dateOfBirth ? `${formatDate(patient.dateOfBirth)} (${calculateAge(patient.dateOfBirth)})` : '-'}
+                        {patient.gender === "L" ? "Pria" : "Wanita"}
                       </td>
-                      <td className="px-4 py-3">{patient.lastVisit ? formatDate(patient.lastVisit) : '-'}</td>
                       <td className="px-4 py-3">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-pink-600 border-pink-300 hover:bg-pink-50"
-                          onClick={() => router.push(`/dashboard/dokter/pasien/daftar-pasien/${patient.id}`)}
-                        >
-                          Lihat Detail
-                        </Button>
+                        {patient.dateOfBirth
+                          ? `${formatDate(patient.dateOfBirth)} (${calculateAge(patient.dateOfBirth)})`
+                          : "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {patient.lastVisit ? formatDate(patient.lastVisit) : "-"}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="truncate">
+                            {patient.chiefComplaint && patient.chiefComplaint.trim() !== ""
+                              ? patient.chiefComplaint
+                              : "-"}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              router.push(`/rekam-medis/tambah?rm=${patient.rmNo}`)
+                            }
+                            className="p-2 rounded-full hover:bg-pink-200 transition shrink-0"
+                            title="Tambah rekam medis"
+                          >
+                            <PlusCircle className="h-5 w-5 text-pink-700" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

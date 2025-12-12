@@ -158,11 +158,11 @@ export default function TambahAntrianPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-50">
+    <div className="min-h-screen bg-linear-to-br from-pink-50 to-rose-50">
       <DoctorNavbar />
       
       <div className="flex flex-col items-center py-12 px-4">
-        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 shadow-2xl flex items-center justify-center mb-6">
+        <div className="w-24 h-24 rounded-full bg-linear-to-br from-pink-500 to-rose-600 shadow-2xl flex items-center justify-center mb-6">
           <Users className="text-white" size={48} strokeWidth={2.5} />
         </div>
 
@@ -171,7 +171,7 @@ export default function TambahAntrianPage() {
         </h1>
 
         <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden border-2 border-pink-100">
-          <div className="bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 text-white px-8 py-6">
+          <div className="bg-linear-to-r from-pink-500 via-rose-500 to-pink-600 text-white px-8 py-6">
             <h2 className="font-bold text-2xl flex items-center gap-3">
               <Users size={28} />
               Informasi Pasien
@@ -336,7 +336,7 @@ export default function TambahAntrianPage() {
                 <Button
                   type="submit"
                   className="h-10 sm:h-11 px-6 sm:px-8 
-                            bg-gradient-to-r from-pink-600 to-rose-600 
+                            bg-linear-to-r from-pink-600 to-rose-600 
                             hover:from-pink-700 hover:to-rose-700
                             text-white font-semibold rounded-full 
                             text-sm sm:text-base shadow-md hover:shadow-lg

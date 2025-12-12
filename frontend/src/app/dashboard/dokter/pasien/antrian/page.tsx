@@ -111,7 +111,7 @@ export default function QueuePage() {
           <table className="min-w-full divide-y divide-pink-200 text-pink-900">
             <thead className="bg-pink-100">
               <tr>
-                {["NO. ANTRIAN", "NO. PASIEN", "NAMA PASIEN", "JAM KUNJUNGAN", "PERAWAT", "KELUHAN", "STATUS"].map((h) => (
+                {["NO. ANTRIAN", "NO. PASIEN", "NAMA PASIEN", "JAM KUNJUNGAN", "PERAWAT", "TINDAKAN", "STATUS"].map((h) => (
                   <th key={h} className="px-4 py-3 text-left font-semibold text-sm">{h}</th>
                 ))}
               </tr>
