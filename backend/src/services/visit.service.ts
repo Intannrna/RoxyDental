@@ -1,12 +1,18 @@
-import { prisma } from '../config/database';
-import { VisitStatus, Gender } from '../../generated/prisma';
-import { AppError } from '../middlewares/error.middleware';
+// backend/src/services/visit.service.ts
+
+import { prisma } from "../config/database";
+import { VisitStatus, Gender } from "../../generated/prisma";
+import { AppError } from "../middlewares/error.middleware";
+
+/**
+ * ====== TIPE INPUT ======
+ */
 
 interface CreatePatientData {
-  id?: string;
+  id?: string;                 // optional: kalau pasien existing
   fullName: string;
-  dateOfBirth: string;
-  gender: Gender;
+  dateOfBirth: string;         // "YYYY-MM-DD"
+  gender: Gender;              // "L" | "P"
   phone: string;
   email?: string;
   address?: string;
@@ -16,55 +22,73 @@ interface CreatePatientData {
 }
 
 interface CreateVisitData {
-  visitDate: string;
+  visitDate: string;           // ISO string
   chiefComplaint?: string;
   bloodPressure?: string;
   notes?: string;
+  // status optional, default WAITING
+  status?: VisitStatus;
 }
 
-interface CreateVisitInput {
+export interface CreateVisitInput {
   patient: CreatePatientData;
   visit: CreateVisitData;
 }
 
+/**
+ * ====== SERVICE ======
+ */
+
 export class VisitService {
+  /**
+   * Generate patientNumber unik, format:
+   * P-YYYYMM-0001
+   */
   private async generatePatientNumber(): Promise<string> {
     const today = new Date();
     const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, "0");
 
     const lastPatient = await prisma.patient.findFirst({
       where: {
         patientNumber: {
-          startsWith: `P-${year}${month}`
-        }
+          startsWith: `P-${year}${month}`,
+        },
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: "desc",
+      },
     });
 
     let sequence = 1;
     if (lastPatient) {
-      const lastSequence = parseInt(lastPatient.patientNumber.split('-')[2]);
+      const lastSequence = parseInt(lastPatient.patientNumber.split("-")[2]);
       sequence = lastSequence + 1;
     }
 
-    return `P-${year}${month}-${String(sequence).padStart(4, '0')}`;
+    return `P-${year}${month}-${String(sequence).padStart(4, "0")}`;
   }
 
-  // ✅ FIX FINAL: visit number dibuat unik tanpa count() (anti race condition)
+  /**
+   * Generate visitNumber unik:
+   * V-YYYYMMDD-rand4+ms3
+   * Contoh: V-20251212-4837123
+   * Pakai random + millisecond untuk meminimalkan tabrakan (tanpa hitung count()).
+   */
   private async generateVisitNumber(): Promise<string> {
     const now = new Date();
-    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
 
-    // 4 digit random + 3 digit millisecond => sangat kecil kemungkinan tabrakan
     const rand = Math.floor(1000 + Math.random() * 9000); // 1000..9999
-    const ms = String(now.getMilliseconds()).padStart(3, '0'); // 000..999
+    const ms = String(now.getMilliseconds()).padStart(3, "0"); // 000..999
 
-    return `V-${dateStr}-${rand}${ms}`; // contoh: V-20251212-4837123
+    return `V-${dateStr}-${rand}${ms}`;
   }
 
+  /**
+   * Ambil queueNumber berikutnya untuk hari ini.
+   * Di-reset setiap hari, mulai dari 1.
+   */
   private async getNextQueueNumber(): Promise<number> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -75,16 +99,24 @@ export class VisitService {
       where: {
         visitDate: {
           gte: today,
-          lt: tomorrow
-        }
+          lt: tomorrow,
+        },
       },
-      orderBy: { queueNumber: 'desc' }
+      orderBy: { queueNumber: "desc" },
     });
 
     return lastQueue ? lastQueue.queueNumber + 1 : 1;
   }
 
-  async getVisits(page: number = 1, limit: number = 10, status?: VisitStatus, search?: string) {
+  /**
+   * List visit (umum, bisa dipakai untuk admin / dokter)
+   */
+  async getVisits(
+    page: number = 1,
+    limit: number = 10,
+    status?: VisitStatus,
+    search?: string
+  ) {
     const skip = (page - 1) * limit;
 
     const where: any = {};
@@ -95,9 +127,9 @@ export class VisitService {
 
     if (search) {
       where.OR = [
-        { visitNumber: { contains: search, mode: 'insensitive' } },
-        { patient: { fullName: { contains: search, mode: 'insensitive' } } },
-        { patient: { patientNumber: { contains: search, mode: 'insensitive' } } }
+        { visitNumber: { contains: search, mode: "insensitive" } },
+        { patient: { fullName: { contains: search, mode: "insensitive" } } },
+        { patient: { patientNumber: { contains: search, mode: "insensitive" } } },
       ];
     }
 
@@ -112,23 +144,23 @@ export class VisitService {
               fullName: true,
               phone: true,
               gender: true,
-              dateOfBirth: true
-            }
+              dateOfBirth: true,
+            },
           },
           nurse: {
             select: {
               id: true,
-              fullName: true
-            }
-          }
+              fullName: true,
+            },
+          },
         },
         orderBy: {
-          visitDate: 'desc'
+          visitDate: "desc",
         },
         skip,
-        take: limit
+        take: limit,
       }),
-      prisma.visit.count({ where })
+      prisma.visit.count({ where }),
     ]);
 
     return {
@@ -137,11 +169,14 @@ export class VisitService {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
+  /**
+   * Detail 1 visit
+   */
   async getVisitById(id: string) {
     const visit = await prisma.visit.findUnique({
       where: { id },
@@ -150,8 +185,8 @@ export class VisitService {
         nurse: {
           select: {
             id: true,
-            fullName: true
-          }
+            fullName: true,
+          },
         },
         treatments: {
           include: {
@@ -159,48 +194,55 @@ export class VisitService {
             performer: {
               select: {
                 id: true,
-                fullName: true
-              }
-            }
+                fullName: true,
+              },
+            },
           },
           orderBy: {
-            createdAt: 'desc'
-          }
+            createdAt: "desc",
+          },
         },
-        payments: true
-      }
+        payments: true,
+      },
     });
 
     if (!visit) {
-      throw new AppError('Kunjungan tidak ditemukan', 404);
+      throw new AppError("Kunjungan tidak ditemukan", 404);
     }
 
     return visit;
   }
 
+  /**
+   * Create visit (+ pasien baru jika belum ada).
+   * nurseId diisi dari user yang sedang login (dokter/perawat).
+   */
   async createVisit(data: CreateVisitInput, nurseId: string) {
     const { patient, visit } = data;
 
     let patientRecord;
 
+    // Kalau sudah kirim id (pasien existing)
     if (patient.id) {
       patientRecord = await prisma.patient.findUnique({
-        where: { id: patient.id }
+        where: { id: patient.id },
       });
 
       if (!patientRecord) {
-        throw new AppError('Pasien tidak ditemukan', 404);
+        throw new AppError("Pasien tidak ditemukan", 404);
       }
     } else {
+      // Cek dulu berdasarkan nomor telepon
       const existingPatient = await prisma.patient.findFirst({
         where: {
-          phone: patient.phone
-        }
+          phone: patient.phone,
+        },
       });
 
       if (existingPatient) {
         patientRecord = existingPatient;
       } else {
+        // Pasien baru => generate patientNumber
         const patientNumber = await this.generatePatientNumber();
 
         patientRecord = await prisma.patient.create({
@@ -214,15 +256,16 @@ export class VisitService {
             address: patient.address,
             bloodType: patient.bloodType,
             allergies: patient.allergies,
-            medicalHistory: patient.medicalHistory
-          }
+            medicalHistory: patient.medicalHistory,
+          },
         });
       }
     }
 
     const queueNumber = await this.getNextQueueNumber();
+    const status = visit.status || VisitStatus.WAITING;
 
-    // ✅ retry kecil untuk jaga-jaga kalau tabrakan visit_number (harusnya hampir tidak mungkin)
+    // Retry kecil untuk jaga² kalau terjadi duplicate visit_number (harusnya hampir tidak mungkin)
     for (let attempt = 1; attempt <= 5; attempt++) {
       const visitNumber = await this.generateVisitNumber();
 
@@ -234,40 +277,44 @@ export class VisitService {
             visitNumber,
             visitDate: new Date(visit.visitDate),
             queueNumber,
-            status: VisitStatus.WAITING,
+            status,
             chiefComplaint: visit.chiefComplaint,
             bloodPressure: visit.bloodPressure,
-            notes: visit.notes
+            notes: visit.notes,
           },
           include: {
             patient: true,
             nurse: {
               select: {
                 id: true,
-                fullName: true
-              }
-            }
-          }
+                fullName: true,
+              },
+            },
+          },
         });
 
         return newVisit;
       } catch (err: any) {
         const isDuplicateVisitNumber =
-          err?.code === 'P2002' &&
+          err?.code === "P2002" &&
           Array.isArray(err?.meta?.target) &&
-          err.meta.target.includes('visit_number');
+          err.meta.target.includes("visit_number");
 
         if (isDuplicateVisitNumber && attempt < 5) {
-          continue; // coba lagi generate nomor baru
+          // generate nomor baru lalu coba lagi
+          continue;
         }
 
         throw err;
       }
     }
 
-    throw new AppError('Gagal membuat nomor kunjungan unik', 500);
+    throw new AppError("Gagal membuat nomor kunjungan unik", 500);
   }
 
+  /**
+   * Antrian hari ini (WAITING + IN_PROGRESS)
+   */
   async getQueue(search?: string) {
     const today = new Date();
 
@@ -280,18 +327,18 @@ export class VisitService {
     const where: any = {
       visitDate: {
         gte: startOfDay,
-        lte: endOfDay
+        lte: endOfDay,
       },
       status: {
-        in: [VisitStatus.WAITING, VisitStatus.IN_PROGRESS]
-      }
+        in: [VisitStatus.WAITING, VisitStatus.IN_PROGRESS],
+      },
     };
 
     if (search) {
       where.OR = [
-        { visitNumber: { contains: search, mode: 'insensitive' } },
-        { patient: { fullName: { contains: search, mode: 'insensitive' } } },
-        { patient: { patientNumber: { contains: search, mode: 'insensitive' } } }
+        { visitNumber: { contains: search, mode: "insensitive" } },
+        { patient: { fullName: { contains: search, mode: "insensitive" } } },
+        { patient: { patientNumber: { contains: search, mode: "insensitive" } } },
       ];
     }
 
@@ -303,31 +350,34 @@ export class VisitService {
             id: true,
             patientNumber: true,
             fullName: true,
-            phone: true
-          }
+            phone: true,
+          },
         },
         nurse: {
           select: {
             id: true,
-            fullName: true
-          }
-        }
+            fullName: true,
+          },
+        },
       },
       orderBy: {
-        queueNumber: 'asc'
-      }
+        queueNumber: "asc",
+      },
     });
 
     return queue;
   }
 
+  /**
+   * Update status visit
+   */
   async updateVisitStatus(id: string, status: VisitStatus) {
     const visit = await prisma.visit.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!visit) {
-      throw new AppError('Kunjungan tidak ditemukan', 404);
+      throw new AppError("Kunjungan tidak ditemukan", 404);
     }
 
     const updatedVisit = await prisma.visit.update({
@@ -336,27 +386,34 @@ export class VisitService {
       include: {
         patient: {
           select: {
-            fullName: true
-          }
-        }
-      }
+            fullName: true,
+          },
+        },
+      },
     });
 
     return updatedVisit;
   }
 
-  async getCompletedVisits(page: number = 1, limit: number = 10, search?: string) {
+  /**
+   * Kunjungan yang sudah selesai (rekam medis)
+   */
+  async getCompletedVisits(
+    page: number = 1,
+    limit: number = 10,
+    search?: string
+  ) {
     const skip = (page - 1) * limit;
 
     const where: any = {
-      status: VisitStatus.COMPLETED
+      status: VisitStatus.COMPLETED,
     };
 
     if (search) {
       where.OR = [
-        { visitNumber: { contains: search, mode: 'insensitive' } },
-        { patient: { fullName: { contains: search, mode: 'insensitive' } } },
-        { patient: { patientNumber: { contains: search, mode: 'insensitive' } } }
+        { visitNumber: { contains: search, mode: "insensitive" } },
+        { patient: { fullName: { contains: search, mode: "insensitive" } } },
+        { patient: { patientNumber: { contains: search, mode: "insensitive" } } },
       ];
     }
 
@@ -371,32 +428,33 @@ export class VisitService {
               fullName: true,
               dateOfBirth: true,
               gender: true,
-              phone: true
-            }
+              phone: true,
+            },
           },
+          // ambil treatment terakhir (diagnosis & tindakan)
           treatments: {
             select: {
               id: true,
               diagnosis: true,
               service: {
                 select: {
-                  serviceName: true
-                }
-              }
+                  serviceName: true,
+                },
+              },
             },
             orderBy: {
-              createdAt: 'desc'
+              createdAt: "desc",
             },
-            take: 1
-          }
+            take: 1,
+          },
         },
         orderBy: {
-          visitDate: 'desc'
+          visitDate: "desc",
         },
         skip,
-        take: limit
+        take: limit,
       }),
-      prisma.visit.count({ where })
+      prisma.visit.count({ where }),
     ]);
 
     return {
@@ -405,8 +463,8 @@ export class VisitService {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 }

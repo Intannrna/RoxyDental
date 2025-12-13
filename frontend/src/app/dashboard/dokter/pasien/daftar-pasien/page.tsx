@@ -193,25 +193,7 @@ export default function PatientListPage() {
                         {patient.chiefComplaint && patient.chiefComplaint.trim() !== ""
                           ? patient.chiefComplaint
                           : "-"}
-                      </td>
-
-                      {/* AKSI – HANYA DIGANTI BAGIAN INI */}
-                      <td className="px-3 py-3 text-right">
-                        {patient.lastVisitId ? (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              router.push(`/dashboard/dokter/pasien/detail/${patient.lastVisitId}`)
-                            }
-                            className="p-2 rounded-full hover:bg-pink-200 transition"
-                            title="Detail"
-                          >
-                            <PlusCircle className="h-5 w-5 text-pink-700" />
-                          </button>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
+                      </td>         
                     </tr>
                   ))
                 )}

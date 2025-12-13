@@ -1,10 +1,14 @@
-import apiClient from './api.client';
+// src/services/visit.service.ts
+import apiClient from "./api.client";
 
-export interface Patient {
-  id?: string;
+export type GenderType = "L" | "P";
+export type VisitStatusType = "WAITING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+
+export interface PatientPayload {
+  id?: string;          
   fullName: string;
-  dateOfBirth: string;
-  gender: 'L' | 'P';
+  dateOfBirth: string;   
+  gender: GenderType;
   phone: string;
   email?: string;
   address?: string;
@@ -13,13 +17,51 @@ export interface Patient {
   medicalHistory?: string;
 }
 
+export interface VisitPayload {
+  visitDate: string;          // ISO string
+  chiefComplaint?: string;
+  bloodPressure?: string;
+  notes?: string;
+}
+
 export interface CreateVisitData {
-  patient: Patient;
-  visit: {
-    visitDate: string;
-    chiefComplaint?: string;
-    bloodPressure?: string;
-    notes?: string;
+  patient: PatientPayload;
+  visit: VisitPayload;
+}
+
+export interface VisitPatient {
+  id: string;
+  patientNumber: string;
+  fullName: string;
+  phone: string;
+  gender: string;       // "L" | "P"
+  dateOfBirth: string;
+  email?: string;
+  address?: string;
+  bloodType?: string;
+  allergies?: string;
+  medicalHistory?: string;
+}
+
+export interface VisitNurse {
+  id: string;
+  fullName: string;
+}
+
+export interface Treatment {
+  id: string;
+  diagnosis?: string;
+  treatmentNotes?: string;
+  quantity: number;
+  subtotal: number;
+  toothNumber?: string | null;
+  createdAt: string;
+  service?: {
+    serviceName: string;
+  };
+  performer?: {
+    id: string;
+    fullName: string;
   };
 }
 
@@ -28,24 +70,21 @@ export interface Visit {
   visitNumber: string;
   visitDate: string;
   queueNumber: number;
-  status: string;
+  status: VisitStatusType;
   chiefComplaint?: string;
   bloodPressure?: string;
   notes?: string;
-  totalCost: number;
-  patient: {
-    id: string;
-    patientNumber: string;
-    fullName: string;
-    phone: string;
-    gender: string;
-    dateOfBirth: string;
-  };
-  nurse: {
+  totalCost?: number;
+
+  patient: VisitPatient;
+
+  doctor?: {
     id: string;
     fullName: string;
-  };
-  treatments?: any[];
+  } | null;
+
+  nurse?: VisitNurse | null;
+  treatments?: Treatment[];
 }
 
 export interface VisitListResponse {
@@ -59,32 +98,51 @@ export interface VisitListResponse {
 }
 
 export const visitService = {
-  async getQueue(search?: string) {
+  async getDoctorQueue(search?: string): Promise<Visit[]> {
     const params = search ? { search } : {};
-    const response = await apiClient.get('/doctor/visits/queue', { params });
-    return response.data;
+    const res = await apiClient.get<Visit[]>("/doctor/visits/queue", { params });
+    return res.data;
   },
 
-  async getCompletedVisits(page: number = 1, limit: number = 10, search?: string) {
+  async getNurseQueue(search?: string): Promise<Visit[]> {
+    const params = search ? { search } : {};
+    const res = await apiClient.get<Visit[]>("/doctor/visits/queue", { params });
+    return res.data;
+  },
+
+  async getCompletedVisits(
+    page: number = 1,
+    limit: number = 10,
+    search?: string
+  ): Promise<VisitListResponse> {
     const params: any = { page, limit };
     if (search) params.search = search;
-    
-    const response = await apiClient.get('/doctor/visits/completed', { params });
-    return response.data;
+
+    const res = await apiClient.get<VisitListResponse>("/doctor/visits/completed", {
+      params,
+    });
+    return res.data;
   },
 
-  async getVisitById(id: string) {
-    const response = await apiClient.get(`/doctor/visits/${id}`);
-    return response.data;
+  async getVisitById(id: string): Promise<Visit> {
+    const res = await apiClient.get<Visit>(`/doctor/visits/${id}`);
+    return res.data;
   },
 
-  async createVisit(data: CreateVisitData) {
-    const response = await apiClient.post('/doctor/visits', data);
-    return response.data;
+  async createVisitAsDoctor(data: CreateVisitData): Promise<Visit> {
+    const res = await apiClient.post<Visit>("/doctor/visits", data);
+    return res.data;
   },
 
-  async updateVisitStatus(id: string, status: string) {
-    const response = await apiClient.patch(`/doctor/visits/${id}/status`, { status });
-    return response.data;
-  }
+  async createVisitAsNurse(data: CreateVisitData): Promise<Visit> {
+    const res = await apiClient.post<Visit>("/doctor/visits", data);
+    return res.data;
+  },
+
+  async updateVisitStatus(id: string, status: VisitStatusType): Promise<Visit> {
+    const res = await apiClient.patch<Visit>(`/doctor/visits/${id}/status`, {
+      status,
+    });
+    return res.data;
+  },
 };
