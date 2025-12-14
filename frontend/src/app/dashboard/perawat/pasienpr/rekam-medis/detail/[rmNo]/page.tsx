@@ -22,27 +22,27 @@ export default function MedicalRecordDetailPage({ params }: DetailProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchVisitData = async () => {
-      try {
-        setLoading(true);
-        const visit = await visitService.getVisitByNumber(rmNo);
-        setData(visit);
-      } catch (error: any) {
-        console.error("Error fetching visit data:", error);
-        toast({
-          title: "Error",
-          description:
-            error?.response?.data?.message || "Gagal memuat data rekam medis",
-          variant: "destructive",
-        });
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchVisitData();
-  }, [rmNo, toast]);
+  }, [rmNo]);
+
+  const fetchVisitData = async () => {
+    try {
+      setLoading(true);
+      const visit = await visitService.getVisitByMedicalRecord(rmNo);
+      setData(visit);
+    } catch (error: any) {
+      console.error("Error fetching visit data:", error);
+      toast({
+        title: "Error",
+        description:
+          error?.response?.data?.message || "Gagal memuat data rekam medis",
+        variant: "destructive",
+      });
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const calculateAge = (dateOfBirth: string) => {
     const today = new Date();
@@ -117,10 +117,10 @@ export default function MedicalRecordDetailPage({ params }: DetailProps) {
           <CardContent className="pt-6 grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">No. Rekam Medis</p>
-              <p className="font-semibold">{data.visitNumber || "-"}</p>
+              <p className="font-semibold">{data.patient.medicalRecordNumber || "-"}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">No. Pasien</p>
+              <p className="text-sm text-gray-500">No. ID</p>
               <p className="font-semibold">
                 {data.patient.patientNumber || "-"}
               </p>
@@ -174,26 +174,22 @@ export default function MedicalRecordDetailPage({ params }: DetailProps) {
 
         <Card>
           <CardHeader className="bg-pink-50">
-            <CardTitle className="text-pink-600">Informasi Kunjungan</CardTitle>
+            <CardTitle className="text-pink-600">Informasi Kunjungan Terkini</CardTitle>
           </CardHeader>
           <CardContent className="pt-6 grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-500">No. Antrian</p>
-              <p className="font-semibold">{data.queueNumber || "-"}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Perawat</p>
-              <p className="font-semibold">{data.nurse?.fullName || "-"}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Dokter</p>
-              <p className="font-semibold">{data.doctor?.fullName || "-"}</p>
-            </div>
             <div>
               <p className="text-sm text-gray-500">Tanggal Kunjungan</p>
               <p className="font-semibold">
                 {data.visitDate ? formatDate(data.visitDate) : "-"}
               </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Dokter Pemeriksa</p>
+              <p className="font-semibold">{data.doctor?.fullName || "-"}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Perawat</p>
+              <p className="font-semibold">{data.nurse?.fullName || "-"}</p>
             </div>
             {data.bloodPressure && (
               <div>
@@ -210,7 +206,7 @@ export default function MedicalRecordDetailPage({ params }: DetailProps) {
 
         <Card>
           <CardHeader className="bg-pink-50">
-            <CardTitle className="text-pink-600">Riwayat Treatment</CardTitle>
+            <CardTitle className="text-pink-600">Detail Pemeriksaan</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
             {!data.treatments || data.treatments.length === 0 ? (
@@ -269,7 +265,7 @@ export default function MedicalRecordDetailPage({ params }: DetailProps) {
                         {treatment.treatmentNotes && (
                           <div className="col-span-2">
                             <p className="text-sm text-gray-500">
-                              Catatan Treatment
+                              Hasil Pemeriksaan Fisik
                             </p>
                             <p className="font-semibold">
                               {treatment.treatmentNotes}
@@ -277,17 +273,19 @@ export default function MedicalRecordDetailPage({ params }: DetailProps) {
                           </div>
                         )}
                         <div>
-                          <p className="text-sm text-gray-500">Jumlah</p>
+                          <p className="text-sm text-gray-500">Rencana Perawatan</p>
                           <p className="font-semibold">
-                            {treatment.quantity}
+                            Scaling dan pembersihan menyeluruh, edukasi kebersihan mulut
                           </p>
                         </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Subtotal</p>
-                          <p className="font-semibold">
-                            {formatCurrency(treatment.subtotal)}
-                          </p>
-                        </div>
+                        {treatment.notes && (
+                          <div className="col-span-2">
+                            <p className="text-sm text-gray-500">Catatan</p>
+                            <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 mt-1">
+                              <p className="font-semibold text-sm">{treatment.notes}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

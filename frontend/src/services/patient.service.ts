@@ -3,6 +3,7 @@ import apiClient from './api.client';
 export interface PatientWithVisit {
   id: string;
   patientNumber: string;
+  medicalRecordNumber?: string;
   fullName: string;
   gender: string;
   dateOfBirth: string;

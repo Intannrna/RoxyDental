@@ -31,6 +31,7 @@ export interface CreateVisitData {
 export interface VisitPatient {
   id: string;
   patientNumber: string;
+  medicalRecordNumber?: string;
   fullName: string;
   phone: string;
   gender: string;
@@ -60,6 +61,7 @@ export interface Treatment {
   subtotal: number;
   toothNumber?: string | null;
   createdAt: string;
+  notes?: string;
   service?: {
     serviceName: string;
   };
@@ -126,6 +128,11 @@ export const visitService = {
 
   async getVisitByNumber(visitNumber: string): Promise<Visit> {
     const res = await apiClient.get(`/doctor/visits/number/${visitNumber}`);
+    return res.data.data || res.data;
+  },
+
+  async getVisitByMedicalRecord(medicalRecordNumber: string): Promise<Visit> {
+    const res = await apiClient.get(`/doctor/visits/medical-record/${medicalRecordNumber}`);
     return res.data.data || res.data;
   },
 

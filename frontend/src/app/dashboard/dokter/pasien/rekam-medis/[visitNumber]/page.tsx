@@ -41,7 +41,7 @@ export default function MedicalRecordDetailPage({ params }: DetailProps) {
   const fetchVisitData = async () => {
     try {
       setLoading(true);
-      const visit = await visitService.getVisitByNumber(visitNumber);
+      const visit = await visitService.getVisitByMedicalRecord(visitNumber);
       setData(visit);
     } catch (error: any) {
       console.error("Error fetching visit data:", error);
@@ -152,10 +152,10 @@ export default function MedicalRecordDetailPage({ params }: DetailProps) {
           <CardContent className="pt-6 grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">No. Rekam Medis</p>
-              <p className="font-semibold">{data.visitNumber || "-"}</p>
+              <p className="font-semibold">{data.patient.medicalRecordNumber || "-"}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">No. Pasien</p>
+              <p className="text-sm text-gray-500">No. ID</p>
               <p className="font-semibold">
                 {data.patient.patientNumber || "-"}
               </p>
@@ -209,26 +209,22 @@ export default function MedicalRecordDetailPage({ params }: DetailProps) {
 
         <Card>
           <CardHeader className="bg-pink-50">
-            <CardTitle className="text-pink-600">Informasi Kunjungan</CardTitle>
+            <CardTitle className="text-pink-600">Informasi Kunjungan Terkini</CardTitle>
           </CardHeader>
           <CardContent className="pt-6 grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-500">No. Antrian</p>
-              <p className="font-semibold">{data.queueNumber || "-"}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Perawat</p>
-              <p className="font-semibold">{data.nurse?.fullName || "-"}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Dokter</p>
-              <p className="font-semibold">{data.doctor?.fullName || "-"}</p>
-            </div>
             <div>
               <p className="text-sm text-gray-500">Tanggal Kunjungan</p>
               <p className="font-semibold">
                 {data.visitDate ? formatDate(data.visitDate) : "-"}
               </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Dokter Pemeriksa</p>
+              <p className="font-semibold">{data.doctor?.fullName || "-"}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Perawat</p>
+              <p className="font-semibold">{data.nurse?.fullName || "-"}</p>
             </div>
             {data.bloodPressure && (
               <div>
@@ -245,7 +241,7 @@ export default function MedicalRecordDetailPage({ params }: DetailProps) {
 
         <Card>
           <CardHeader className="bg-pink-50 flex flex-row items-center justify-between">
-            <CardTitle className="text-pink-600">Riwayat Treatment</CardTitle>
+            <CardTitle className="text-pink-600">Detail Pemeriksaan</CardTitle>
             <Button
               onClick={() =>
                 router.push(
@@ -255,7 +251,7 @@ export default function MedicalRecordDetailPage({ params }: DetailProps) {
               className="bg-pink-600 hover:bg-pink-700"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Tambah Treatment
+              Obat yang Diberikan
             </Button>
           </CardHeader>
           <CardContent className="pt-6">
@@ -342,7 +338,7 @@ export default function MedicalRecordDetailPage({ params }: DetailProps) {
                         {treatment.treatmentNotes && (
                           <div className="col-span-2">
                             <p className="text-sm text-gray-500">
-                              Catatan Treatment
+                              Hasil Pemeriksaan Fisik
                             </p>
                             <p className="font-semibold">
                               {treatment.treatmentNotes}
@@ -350,17 +346,19 @@ export default function MedicalRecordDetailPage({ params }: DetailProps) {
                           </div>
                         )}
                         <div>
-                          <p className="text-sm text-gray-500">Jumlah</p>
+                          <p className="text-sm text-gray-500">Rencana Perawatan</p>
                           <p className="font-semibold">
-                            {treatment.quantity}
+                            Scaling dan pembersihan menyeluruh, edukasi kebersihan mulut
                           </p>
                         </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Subtotal</p>
-                          <p className="font-semibold">
-                            {formatCurrency(treatment.subtotal)}
-                          </p>
-                        </div>
+                        {treatment.notes && (
+                          <div className="col-span-2">
+                            <p className="text-sm text-gray-500">Catatan</p>
+                            <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 mt-1">
+                              <p className="font-semibold text-sm">{treatment.notes}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

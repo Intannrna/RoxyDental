@@ -1,18 +1,12 @@
-// backend/src/services/visit.service.ts
-
 import { prisma } from "../config/database";
 import { VisitStatus, Gender } from "../../generated/prisma";
 import { AppError } from "../middlewares/error.middleware";
 
-/**
- * ====== TIPE INPUT ======
- */
-
 interface CreatePatientData {
-  id?: string;                 // optional: kalau pasien existing
+  id?: string;
   fullName: string;
-  dateOfBirth: string;         // "YYYY-MM-DD"
-  gender: Gender;              // "L" | "P"
+  dateOfBirth: string;
+  gender: Gender;
   phone: string;
   email?: string;
   address?: string;
@@ -22,11 +16,10 @@ interface CreatePatientData {
 }
 
 interface CreateVisitData {
-  visitDate: string;           // ISO string
+  visitDate: string;
   chiefComplaint?: string;
   bloodPressure?: string;
   notes?: string;
-  // status optional, default WAITING
   status?: VisitStatus;
 }
 
@@ -35,15 +28,7 @@ export interface CreateVisitInput {
   visit: CreateVisitData;
 }
 
-/**
- * ====== SERVICE ======
- */
-
 export class VisitService {
-  /**
-   * Generate patientNumber unik, format:
-   * P-YYYYMM-0001
-   */
   private async generatePatientNumber(): Promise<string> {
     const today = new Date();
     const year = today.getFullYear();
@@ -69,26 +54,41 @@ export class VisitService {
     return `P-${year}${month}-${String(sequence).padStart(4, "0")}`;
   }
 
-  /**
-   * Generate visitNumber unik:
-   * V-YYYYMMDD-rand4+ms3
-   * Contoh: V-20251212-4837123
-   * Pakai random + millisecond untuk meminimalkan tabrakan (tanpa hitung count()).
-   */
+  private async generateMedicalRecordNumber(): Promise<string> {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    
+    const lastPatient = await prisma.patient.findFirst({
+      where: {
+        medicalRecordNumber: {
+          startsWith: `RM-${year}${month}`
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    let sequence = 1;
+    if (lastPatient && lastPatient.medicalRecordNumber) {
+      const lastSequence = parseInt(lastPatient.medicalRecordNumber.split('-')[2]);
+      sequence = lastSequence + 1;
+    }
+
+    return `RM-${year}${month}-${String(sequence).padStart(4, '0')}`;
+  }
+
   private async generateVisitNumber(): Promise<string> {
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
 
-    const rand = Math.floor(1000 + Math.random() * 9000); // 1000..9999
-    const ms = String(now.getMilliseconds()).padStart(3, "0"); // 000..999
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    const ms = String(now.getMilliseconds()).padStart(3, "0");
 
     return `V-${dateStr}-${rand}${ms}`;
   }
 
-  /**
-   * Ambil queueNumber berikutnya untuk hari ini.
-   * Di-reset setiap hari, mulai dari 1.
-   */
   private async getNextQueueNumber(): Promise<number> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -108,9 +108,56 @@ export class VisitService {
     return lastQueue ? lastQueue.queueNumber + 1 : 1;
   }
 
-  /**
-   * List visit (umum, bisa dipakai untuk admin / dokter)
-   */
+  async getVisitByMedicalRecord(medicalRecordNumber: string) {
+  const patient = await prisma.patient.findFirst({
+    where: { medicalRecordNumber }
+  });
+
+  if (!patient) {
+    throw new AppError("Pasien dengan nomor rekam medis tersebut tidak ditemukan", 404);
+  }
+
+  const visit = await prisma.visit.findFirst({
+    where: { 
+      patientId: patient.id,
+      status: VisitStatus.COMPLETED
+    },
+    include: {
+      patient: true,
+      nurse: {
+        select: {
+          id: true,
+          fullName: true,
+        },
+      },
+      treatments: {
+        include: {
+          service: true,
+          performer: {
+            select: {
+              id: true,
+              fullName: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+      payments: true,
+    },
+    orderBy: {
+      visitDate: "desc"
+    }
+  });
+
+  if (!visit) {
+    throw new AppError("Kunjungan tidak ditemukan", 404);
+  }
+
+  return visit;
+}
+
   async getVisits(
     page: number = 1,
     limit: number = 10,
@@ -130,6 +177,7 @@ export class VisitService {
         { visitNumber: { contains: search, mode: "insensitive" } },
         { patient: { fullName: { contains: search, mode: "insensitive" } } },
         { patient: { patientNumber: { contains: search, mode: "insensitive" } } },
+        { patient: { medicalRecordNumber: { contains: search, mode: "insensitive" } } },
       ];
     }
 
@@ -141,6 +189,7 @@ export class VisitService {
             select: {
               id: true,
               patientNumber: true,
+              medicalRecordNumber: true,
               fullName: true,
               phone: true,
               gender: true,
@@ -174,9 +223,6 @@ export class VisitService {
     };
   }
 
-  /**
-   * Detail 1 visit
-   */
   async getVisitById(id: string) {
     const visit = await prisma.visit.findUnique({
       where: { id },
@@ -213,16 +259,47 @@ export class VisitService {
     return visit;
   }
 
-  /**
-   * Create visit (+ pasien baru jika belum ada).
-   * nurseId diisi dari user yang sedang login (dokter/perawat).
-   */
+  async getVisitByNumber(visitNumber: string) {
+    const visit = await prisma.visit.findFirst({
+      where: { visitNumber },
+      include: {
+        patient: true,
+        nurse: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+        treatments: {
+          include: {
+            service: true,
+            performer: {
+              select: {
+                id: true,
+                fullName: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        payments: true,
+      },
+    });
+
+    if (!visit) {
+      throw new AppError("Kunjungan tidak ditemukan", 404);
+    }
+
+    return visit;
+  }
+
   async createVisit(data: CreateVisitInput, nurseId: string) {
     const { patient, visit } = data;
 
     let patientRecord;
 
-    // Kalau sudah kirim id (pasien existing)
     if (patient.id) {
       patientRecord = await prisma.patient.findUnique({
         where: { id: patient.id },
@@ -231,8 +308,15 @@ export class VisitService {
       if (!patientRecord) {
         throw new AppError("Pasien tidak ditemukan", 404);
       }
+
+      if (!patientRecord.medicalRecordNumber) {
+        const medicalRecordNumber = await this.generateMedicalRecordNumber();
+        patientRecord = await prisma.patient.update({
+          where: { id: patientRecord.id },
+          data: { medicalRecordNumber }
+        });
+      }
     } else {
-      // Cek dulu berdasarkan nomor telepon
       const existingPatient = await prisma.patient.findFirst({
         where: {
           phone: patient.phone,
@@ -241,13 +325,22 @@ export class VisitService {
 
       if (existingPatient) {
         patientRecord = existingPatient;
+        
+        if (!patientRecord.medicalRecordNumber) {
+          const medicalRecordNumber = await this.generateMedicalRecordNumber();
+          patientRecord = await prisma.patient.update({
+            where: { id: patientRecord.id },
+            data: { medicalRecordNumber }
+          });
+        }
       } else {
-        // Pasien baru => generate patientNumber
         const patientNumber = await this.generatePatientNumber();
+        const medicalRecordNumber = await this.generateMedicalRecordNumber();
 
         patientRecord = await prisma.patient.create({
           data: {
             patientNumber,
+            medicalRecordNumber,
             fullName: patient.fullName,
             dateOfBirth: new Date(patient.dateOfBirth),
             gender: patient.gender,
@@ -265,7 +358,6 @@ export class VisitService {
     const queueNumber = await this.getNextQueueNumber();
     const status = visit.status || VisitStatus.WAITING;
 
-    // Retry kecil untuk jaga² kalau terjadi duplicate visit_number (harusnya hampir tidak mungkin)
     for (let attempt = 1; attempt <= 5; attempt++) {
       const visitNumber = await this.generateVisitNumber();
 
@@ -301,7 +393,6 @@ export class VisitService {
           err.meta.target.includes("visit_number");
 
         if (isDuplicateVisitNumber && attempt < 5) {
-          // generate nomor baru lalu coba lagi
           continue;
         }
 
@@ -312,9 +403,6 @@ export class VisitService {
     throw new AppError("Gagal membuat nomor kunjungan unik", 500);
   }
 
-  /**
-   * Antrian hari ini (WAITING + IN_PROGRESS)
-   */
   async getQueue(search?: string) {
     const today = new Date();
 
@@ -339,6 +427,7 @@ export class VisitService {
         { visitNumber: { contains: search, mode: "insensitive" } },
         { patient: { fullName: { contains: search, mode: "insensitive" } } },
         { patient: { patientNumber: { contains: search, mode: "insensitive" } } },
+        { patient: { medicalRecordNumber: { contains: search, mode: "insensitive" } } },
       ];
     }
 
@@ -349,6 +438,7 @@ export class VisitService {
           select: {
             id: true,
             patientNumber: true,
+            medicalRecordNumber: true,
             fullName: true,
             phone: true,
           },
@@ -368,9 +458,6 @@ export class VisitService {
     return queue;
   }
 
-  /**
-   * Update status visit
-   */
   async updateVisitStatus(id: string, status: VisitStatus) {
     const visit = await prisma.visit.findUnique({
       where: { id },
@@ -395,9 +482,6 @@ export class VisitService {
     return updatedVisit;
   }
 
-  /**
-   * Kunjungan yang sudah selesai (rekam medis)
-   */
   async getCompletedVisits(
     page: number = 1,
     limit: number = 10,
@@ -414,6 +498,7 @@ export class VisitService {
         { visitNumber: { contains: search, mode: "insensitive" } },
         { patient: { fullName: { contains: search, mode: "insensitive" } } },
         { patient: { patientNumber: { contains: search, mode: "insensitive" } } },
+        { patient: { medicalRecordNumber: { contains: search, mode: "insensitive" } } },
       ];
     }
 
@@ -425,13 +510,13 @@ export class VisitService {
             select: {
               id: true,
               patientNumber: true,
+              medicalRecordNumber: true,
               fullName: true,
               dateOfBirth: true,
               gender: true,
               phone: true,
             },
           },
-          // ambil treatment terakhir (diagnosis & tindakan)
           treatments: {
             select: {
               id: true,

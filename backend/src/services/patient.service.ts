@@ -27,6 +27,31 @@ export class PatientService {
     return `P-${year}${month}-${String(sequence).padStart(4, '0')}`;
   }
 
+  private async generateMedicalRecordNumber(): Promise<string> {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    
+    const lastPatient = await prisma.patient.findFirst({
+      where: {
+        medicalRecordNumber: {
+          startsWith: `RM-${year}${month}`
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    let sequence = 1;
+    if (lastPatient && lastPatient.medicalRecordNumber) {
+      const lastSequence = parseInt(lastPatient.medicalRecordNumber.split('-')[2]);
+      sequence = lastSequence + 1;
+    }
+
+    return `RM-${year}${month}-${String(sequence).padStart(4, '0')}`;
+  }
+
   async getPatients(page: number = 1, limit: number = 10, search?: string) {
     const skip = (page - 1) * limit;
 
@@ -36,6 +61,7 @@ export class PatientService {
       where.OR = [
         { fullName: { contains: search, mode: 'insensitive' as const } },
         { patientNumber: { contains: search, mode: 'insensitive' as const } },
+        { medicalRecordNumber: { contains: search, mode: 'insensitive' as const } },
         { phone: { contains: search } }
       ];
     }
@@ -46,6 +72,7 @@ export class PatientService {
         select: {
           id: true,
           patientNumber: true,
+          medicalRecordNumber: true,
           fullName: true,
           dateOfBirth: true,
           gender: true,
@@ -62,8 +89,23 @@ export class PatientService {
             take: 1,
             select: {
               id: true,
+              visitNumber: true,
               visitDate: true,
-              chiefComplaint: true
+              chiefComplaint: true,
+              treatments: {
+                take: 1,
+                orderBy: {
+                  createdAt: 'desc'
+                },
+                select: {
+                  diagnosis: true,
+                  service: {
+                    select: {
+                      serviceName: true
+                    }
+                  }
+                }
+              }
             }
           }
         },
@@ -80,7 +122,10 @@ export class PatientService {
       ...p,
       lastVisit: p.visits[0]?.visitDate,
       lastVisitId: p.visits[0]?.id,
+      lastVisitNumber: p.visits[0]?.visitNumber,
       chiefComplaint: p.visits[0]?.chiefComplaint,
+      lastDiagnosis: p.visits[0]?.treatments?.[0]?.diagnosis,
+      lastServiceName: p.visits[0]?.treatments?.[0]?.service?.serviceName,
       visits: undefined
     }));
 
@@ -269,14 +314,23 @@ export class PatientService {
     });
 
     if (existingPatient) {
+      if (!existingPatient.medicalRecordNumber) {
+        const medicalRecordNumber = await this.generateMedicalRecordNumber();
+        return await prisma.patient.update({
+          where: { id: existingPatient.id },
+          data: { medicalRecordNumber }
+        });
+      }
       return existingPatient;
     }
 
     const patientNumber = await this.generatePatientNumber();
+    const medicalRecordNumber = await this.generateMedicalRecordNumber();
 
     const patient = await prisma.patient.create({
       data: {
         patientNumber,
+        medicalRecordNumber,
         fullName: data.fullName,
         dateOfBirth: new Date(data.dateOfBirth),
         gender: data.gender,

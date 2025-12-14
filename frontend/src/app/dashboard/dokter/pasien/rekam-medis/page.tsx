@@ -99,7 +99,7 @@ export default function MedicalRecordsPage() {
     }
   };
 
-  const getNoRm = (row: PatientWithVisit) => row.lastVisitNumber || "-";
+  const getNoRm = (row: PatientWithVisit) => row.medicalRecordNumber || "-";
   const getNoId = (row: PatientWithVisit) => row.patientNumber || "-";
   const getNama = (row: PatientWithVisit) => row.fullName || "-";
   const getTanggal = (row: PatientWithVisit) => {
@@ -110,9 +110,9 @@ export default function MedicalRecordsPage() {
   const getTindakan = (row: PatientWithVisit) => row.chiefComplaint || row.lastServiceName || "-";
 
   const openDetail = (row: PatientWithVisit) => {
-    const visitNumber = row.lastVisitNumber;
-    if (visitNumber) {
-      router.push(`/dashboard/dokter/pasien/rekam-medis/${visitNumber}`);
+    const medicalRecordNumber = row.medicalRecordNumber;
+    if (medicalRecordNumber) {
+      router.push(`/dashboard/dokter/pasien/rekam-medis/${medicalRecordNumber}`);
     } else {
       toast({
         title: "Error",

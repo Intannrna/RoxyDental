@@ -49,7 +49,6 @@ export default function MedicalRecordsPage() {
     totalPages: 0,
   });
 
-  // Nama user yang login (sekarang masih dari nurse summary — nanti bisa kamu ganti ke doctor)
   const [currentUserName, setCurrentUserName] = useState<string>("-");
 
   const tabs = useMemo(
@@ -95,7 +94,6 @@ export default function MedicalRecordsPage() {
       totalPages: 0,
     };
 
-    // Bentuk 1: { success, data: { patients, pagination } }
     const w = raw as PatientsApiWrapped;
     if (w && typeof w === "object" && "data" in w && w.data) {
       const list = (w.data.patients || []) as PatientWithVisit[];
@@ -103,7 +101,6 @@ export default function MedicalRecordsPage() {
       return { list, pg };
     }
 
-    // Bentuk 2: langsung { patients, pagination }
     const d = raw as PatientsApiDirect;
     if (d && typeof d === "object" && ("patients" in d || "pagination" in d)) {
       const list = (d.patients || []) as PatientWithVisit[];
@@ -148,7 +145,6 @@ export default function MedicalRecordsPage() {
 
   useEffect(() => {
     fetchMedicalRecords();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, searchQuery]);
 
   const formatDate = (date: string) => {
@@ -163,10 +159,7 @@ export default function MedicalRecordsPage() {
     }
   };
 
-  // NO. RM: kamu belum punya "RM" beneran -> pakai visitNumber kalau ada, fallback ke visitId
-  const getNoRm = (row: PatientWithVisit) =>
-    row.lastVisitNumber || row.lastVisitId || "-";
-
+  const getNoRm = (row: PatientWithVisit) => row.medicalRecordNumber || "-";
   const getNoId = (row: PatientWithVisit) => row.patientNumber || "-";
   const getNama = (row: PatientWithVisit) => row.fullName || "-";
 
@@ -184,33 +177,17 @@ export default function MedicalRecordsPage() {
       ? row.lastServiceName
       : "-";
 
-  // ✅ Detail tetap bisa dibuka walau belum complete,
-  // asal backend mengirim lastVisitId / lastVisitNumber.
   const openDetail = (row: PatientWithVisit) => {
-    const visitId = row.lastVisitId;
-    const visitNumber = row.lastVisitNumber;
-
-    // Paling aman: pakai visitId (umumnya route detail pakai id)
-    if (visitId) {
-      router.push(`/dashboard/perawat/pasienpr/rekam-medis/detail/${visitId}`);
-      return;
+    const medicalRecordNumber = row.medicalRecordNumber;
+    if (medicalRecordNumber) {
+      router.push(`/dashboard/perawat/pasienpr/rekam-medis/${medicalRecordNumber}`);
+    } else {
+      toast({
+        title: "Error",
+        description: "Nomor rekam medis tidak ditemukan",
+        variant: "destructive",
+      });
     }
-
-    // Kalau kamu punya route detail yang pakai visitNumber
-    if (visitNumber) {
-      router.push(
-        `/dashboard/perawat/pasienpr/rekam-medis/detail/${visitNumber}`
-      );
-      return;
-    }
-
-    // Kalau belum ada visit sama sekali
-    toast({
-      title: "Belum ada kunjungan",
-      description:
-        "Pasien ini belum memiliki data kunjungan/rekam medis, jadi detail belum bisa dibuka.",
-      variant: "destructive",
-    });
   };
 
   return (
@@ -301,11 +278,7 @@ export default function MedicalRecordsPage() {
                     <td className="px-4 py-2">{getNoId(row)}</td>
                     <td className="px-4 py-2 font-medium">{getNama(row)}</td>
                     <td className="px-4 py-2">{getTanggal(row)}</td>
-
-                    {/* Sementara masih currentUserName.
-                       Nanti kalau backend ngirim lastDoctorName, ganti jadi row.lastDoctorName */}
                     <td className="px-4 py-2">{currentUserName}</td>
-
                     <td className="px-4 py-2">
                       <Badge variant="secondary">{getDiagnosis(row)}</Badge>
                     </td>
@@ -318,7 +291,7 @@ export default function MedicalRecordsPage() {
                         className="flex items-center gap-1"
                       >
                         <Eye className="h-4 w-4" />
-                        Detail
+                        Edit
                       </Button>
                     </td>
                   </tr>
