@@ -12,6 +12,26 @@ import { patientService, PatientWithVisit } from "@/services/patient.service";
 import { dashboardNurseService } from "@/services/dashboard-nurse.service";
 import { useToast } from "@/hooks/use-toast";
 
+type Pagination = {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+type PatientsApiWrapped = {
+  success?: boolean;
+  data?: {
+    patients?: PatientWithVisit[];
+    pagination?: Pagination;
+  };
+};
+
+type PatientsApiDirect = {
+  patients?: PatientWithVisit[];
+  pagination?: Pagination;
+};
+
 export default function MedicalRecordsPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -21,19 +41,34 @@ export default function MedicalRecordsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [rows, setRows] = useState<PatientWithVisit[]>([]);
   const [loading, setLoading] = useState(false);
-  const [pagination, setPagination] = useState({
+
+  const [pagination, setPagination] = useState<Pagination>({
     total: 0,
     page: 1,
     limit: 20,
-    totalPages: 0
+    totalPages: 0,
   });
-  const [currentNurseName, setCurrentNurseName] = useState<string>("-");
+
+  // Nama user yang login (sekarang masih dari nurse summary — nanti bisa kamu ganti ke doctor)
+  const [currentUserName, setCurrentUserName] = useState<string>("-");
 
   const tabs = useMemo(
     () => [
-      { label: "Daftar Pasien", value: "daftar-pasien", href: "/dashboard/perawat/pasienpr/daftar-pasien" },
-      { label: "Daftar Antrian", value: "daftar-antrian", href: "/dashboard/perawat/pasienpr/antrian" },
-      { label: "Rekam Medis", value: "rekam-medis", href: "/dashboard/perawat/pasienpr/rekam-medis" }
+      {
+        label: "Daftar Pasien",
+        value: "daftar-pasien",
+        href: "/dashboard/perawat/pasienpr/daftar-pasien",
+      },
+      {
+        label: "Daftar Antrian",
+        value: "daftar-antrian",
+        href: "/dashboard/perawat/pasienpr/antrian",
+      },
+      {
+        label: "Rekam Medis",
+        value: "rekam-medis",
+        href: "/dashboard/perawat/pasienpr/rekam-medis",
+      },
     ],
     []
   );
@@ -43,41 +78,69 @@ export default function MedicalRecordsPage() {
       try {
         const res = await dashboardNurseService.getNurseSummary();
         const name = res?.data?.profile?.fullName;
-        if (name) setCurrentNurseName(name);
+        setCurrentUserName(name || "-");
       } catch {
-        setCurrentNurseName("-");
+        setCurrentUserName("-");
       }
     })();
   }, []);
 
+  const normalizePatientsResponse = (
+    raw: any
+  ): { list: PatientWithVisit[]; pg: Pagination } => {
+    const defaultPg: Pagination = {
+      total: 0,
+      page: currentPage,
+      limit: 20,
+      totalPages: 0,
+    };
+
+    // Bentuk 1: { success, data: { patients, pagination } }
+    const w = raw as PatientsApiWrapped;
+    if (w && typeof w === "object" && "data" in w && w.data) {
+      const list = (w.data.patients || []) as PatientWithVisit[];
+      const pg = (w.data.pagination || defaultPg) as Pagination;
+      return { list, pg };
+    }
+
+    // Bentuk 2: langsung { patients, pagination }
+    const d = raw as PatientsApiDirect;
+    if (d && typeof d === "object" && ("patients" in d || "pagination" in d)) {
+      const list = (d.patients || []) as PatientWithVisit[];
+      const pg = (d.pagination || defaultPg) as Pagination;
+      return { list, pg };
+    }
+
+    return { list: [], pg: defaultPg };
+  };
+
   const fetchMedicalRecords = async () => {
     setLoading(true);
     try {
-      const response = await patientService.getPatients(currentPage, 20, searchQuery);
+      const response = await patientService.getPatients(
+        currentPage,
+        20,
+        searchQuery
+      );
 
-      if (response?.success && response?.data) {
-        const list = response.data.patients || [];
-        const pg = response.data.pagination || {
-          total: 0,
-          page: currentPage,
-          limit: 20,
-          totalPages: 0
-        };
+      const { list, pg } = normalizePatientsResponse(response);
 
-        setRows(list);
-        setPagination(pg);
-      } else {
-        setRows([]);
-        setPagination({ total: 0, page: 1, limit: 20, totalPages: 0 });
-      }
+      setRows(Array.isArray(list) ? list : []);
+      setPagination(pg);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Gagal mengambil data rekam medis",
-        variant: "destructive"
+        description:
+          error?.response?.data?.message || "Gagal mengambil data rekam medis",
+        variant: "destructive",
       });
       setRows([]);
-      setPagination({ total: 0, page: 1, limit: 20, totalPages: 0 });
+      setPagination({
+        total: 0,
+        page: 1,
+        limit: 20,
+        totalPages: 0,
+      });
     } finally {
       setLoading(false);
     }
@@ -85,6 +148,7 @@ export default function MedicalRecordsPage() {
 
   useEffect(() => {
     fetchMedicalRecords();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, searchQuery]);
 
   const formatDate = (date: string) => {
@@ -92,34 +156,61 @@ export default function MedicalRecordsPage() {
       return new Date(date).toLocaleDateString("id-ID", {
         day: "2-digit",
         month: "long",
-        year: "numeric"
+        year: "numeric",
       });
     } catch {
       return "-";
     }
   };
 
-  const getNoRm = (row: PatientWithVisit) => row.lastVisitNumber || "-";
+  // NO. RM: kamu belum punya "RM" beneran -> pakai visitNumber kalau ada, fallback ke visitId
+  const getNoRm = (row: PatientWithVisit) =>
+    row.lastVisitNumber || row.lastVisitId || "-";
+
   const getNoId = (row: PatientWithVisit) => row.patientNumber || "-";
   const getNama = (row: PatientWithVisit) => row.fullName || "-";
+
   const getTanggal = (row: PatientWithVisit) => {
     const raw = row.lastVisit;
     return raw ? formatDate(raw) : "-";
   };
-  const getDiagnosis = (row: PatientWithVisit) => row.lastDiagnosis || "-";
-  const getTindakan = (row: PatientWithVisit) => row.chiefComplaint || row.lastServiceName || "-";
 
+  const getDiagnosis = (row: PatientWithVisit) => row.lastDiagnosis || "-";
+
+  const getTindakan = (row: PatientWithVisit) =>
+    row.chiefComplaint?.trim()
+      ? row.chiefComplaint
+      : row.lastServiceName?.trim()
+      ? row.lastServiceName
+      : "-";
+
+  // ✅ Detail tetap bisa dibuka walau belum complete,
+  // asal backend mengirim lastVisitId / lastVisitNumber.
   const openDetail = (row: PatientWithVisit) => {
+    const visitId = row.lastVisitId;
     const visitNumber = row.lastVisitNumber;
-    if (visitNumber) {
-      router.push(`/dashboard/perawat/pasienpr/rekam-medis/detail/${visitNumber}`);
-    } else {
-      toast({
-        title: "Error",
-        description: "Nomor rekam medis tidak ditemukan",
-        variant: "destructive"
-      });
+
+    // Paling aman: pakai visitId (umumnya route detail pakai id)
+    if (visitId) {
+      router.push(`/dashboard/perawat/pasienpr/rekam-medis/detail/${visitId}`);
+      return;
     }
+
+    // Kalau kamu punya route detail yang pakai visitNumber
+    if (visitNumber) {
+      router.push(
+        `/dashboard/perawat/pasienpr/rekam-medis/detail/${visitNumber}`
+      );
+      return;
+    }
+
+    // Kalau belum ada visit sama sekali
+    toast({
+      title: "Belum ada kunjungan",
+      description:
+        "Pasien ini belum memiliki data kunjungan/rekam medis, jadi detail belum bisa dibuka.",
+      variant: "destructive",
+    });
   };
 
   return (
@@ -165,13 +256,23 @@ export default function MedicalRecordsPage() {
           <table className="min-w-full divide-y divide-pink-200">
             <thead className="bg-pink-100 text-pink-900">
               <tr>
-                {["NO. RM", "NO. ID", "NAMA PASIEN", "TANGGAL", "PERAWAT", "DIAGNOSIS", "TINDAKAN", "AKSI"].map(
-                  (head) => (
-                    <th key={head} className="px-4 py-3 text-left font-semibold text-sm">
-                      {head}
-                    </th>
-                  )
-                )}
+                {[
+                  "NO. RM",
+                  "NO. ID",
+                  "NAMA PASIEN",
+                  "TANGGAL",
+                  "DOKTER",
+                  "DIAGNOSIS",
+                  "TINDAKAN",
+                  "AKSI",
+                ].map((head) => (
+                  <th
+                    key={head}
+                    className="px-4 py-3 text-left font-semibold text-sm"
+                  >
+                    {head}
+                  </th>
+                ))}
               </tr>
             </thead>
 
@@ -186,7 +287,10 @@ export default function MedicalRecordsPage() {
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-4 text-center text-pink-600">
+                  <td
+                    colSpan={8}
+                    className="px-4 py-4 text-center text-pink-600"
+                  >
                     Tidak ada data rekam medis
                   </td>
                 </tr>
@@ -197,7 +301,11 @@ export default function MedicalRecordsPage() {
                     <td className="px-4 py-2">{getNoId(row)}</td>
                     <td className="px-4 py-2 font-medium">{getNama(row)}</td>
                     <td className="px-4 py-2">{getTanggal(row)}</td>
-                    <td className="px-4 py-2">{currentNurseName}</td>
+
+                    {/* Sementara masih currentUserName.
+                       Nanti kalau backend ngirim lastDoctorName, ganti jadi row.lastDoctorName */}
+                    <td className="px-4 py-2">{currentUserName}</td>
+
                     <td className="px-4 py-2">
                       <Badge variant="secondary">{getDiagnosis(row)}</Badge>
                     </td>
