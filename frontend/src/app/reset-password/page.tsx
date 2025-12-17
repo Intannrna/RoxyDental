@@ -125,12 +125,25 @@ function ResetPasswordContent() {
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                className="w-full py-3 px-4 pr-12 outline-none bg-white/70 rounded-xl placeholder-pink-300 focus:ring-2 focus:ring-pink-400 transition-all"
+                className="
+                  w-full py-3 px-4 pr-12
+                  rounded-xl
+                  outline-none
+                  bg-white
+                  border border-slate-300
+                  text-slate-800
+                  placeholder:text-slate-400
+                  focus:border-slate-400
+                  focus:ring-2
+                  focus:ring-slate-200
+                  transition-all
+                "
                 placeholder="Min. 6 karakter"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
               />
+
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -146,12 +159,25 @@ function ResetPasswordContent() {
             <div className="relative">
               <input
                 type={showConfirmPassword ? "text" : "password"}
-                className="w-full py-3 px-4 pr-12 outline-none bg-white/70 rounded-xl placeholder-pink-300 focus:ring-2 focus:ring-pink-400 transition-all"
+                className="
+                  w-full py-3 px-4 pr-12
+                  rounded-xl
+                  outline-none
+                  bg-white
+                  border border-slate-300
+                  text-slate-800
+                  placeholder:text-slate-400
+                  focus:border-slate-400
+                  focus:ring-2
+                  focus:ring-slate-200
+                  transition-all
+                "
                 placeholder="Ulangi password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading}
               />
+
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}

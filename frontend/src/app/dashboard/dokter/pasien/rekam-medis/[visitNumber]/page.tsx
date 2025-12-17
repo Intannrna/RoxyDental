@@ -498,7 +498,7 @@ export default function RekamMedisDetailPage() {
           <div className="lg:col-span-2 space-y-6 font-sans">
             {/* Kunjungan */}
             <Card className="shadow-lg">
-              <CardHeader className="bg-yellow-400/40 rounded-t-md py-3">
+              <CardHeader className="bg-yellow-400/40 rounded-t-md py-5">
                 <div className="flex items-center justify-between w-full">
                   <CardTitle className="text-lg font-semibold leading-none">
                     Informasi Kunjungan Terkini

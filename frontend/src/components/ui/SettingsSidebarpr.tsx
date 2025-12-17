@@ -45,13 +45,6 @@ export default function SettingsSidebar({ activeMenu, setActiveMenu }: Props) {
       path: "/dashboard/perawat/profilpr/passwordpr" 
     },
     { 
-      id: "notifikasi", 
-      label: "Notifikasi", 
-      subtitle: "Pengaturan pemberitahuan", 
-      icon: Bell, 
-      path: "/dashboard/perawat/profilpr/notifikasipr" 
-    },
-    { 
       id: "tentang", 
       label: "Tentang Aplikasi", 
       subtitle: "Info & versi aplikasi", 

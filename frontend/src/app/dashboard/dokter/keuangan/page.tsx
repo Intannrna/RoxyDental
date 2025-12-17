@@ -108,6 +108,8 @@ export default function CommissionReportPage() {
   const displayedMedical = filteredMedical.slice((pageMedical - 1) * PAGE_SIZE, pageMedical * PAGE_SIZE);
   const displayedProcedure = filteredProcedure.slice((pageProcedure - 1) * PAGE_SIZE, pageProcedure * PAGE_SIZE);
   const displayedPacket = filteredPacket.slice((pagePacket - 1) * PAGE_SIZE, pagePacket * PAGE_SIZE);
+  
+  const toNumber = (v: any) => Number(v) || 0;
 
   const totalPagesMedical = Math.max(1, Math.ceil(filteredMedical.length / PAGE_SIZE));
   const totalPagesProcedure = Math.max(1, Math.ceil(filteredProcedure.length / PAGE_SIZE));
@@ -115,33 +117,34 @@ export default function CommissionReportPage() {
 
   const totalMedical = filteredMedical.reduce(
     (acc, s) => {
-      acc.potongan += s.potongan ?? 0;
-      acc.bhpHarga += s.bhpHarga ?? 0;
-      acc.farmasiHarga += s.farmasiHarga ?? 0;
-      acc.paketHarga += s.paketHarga ?? 0;
-      acc.labHarga += s.labHarga ?? 0;
+      acc.potongan += toNumber(s.potongan);
+      acc.bhpHarga += toNumber(s.bhpHarga);
+      acc.farmasiHarga += toNumber(s.farmasiHarga);
+      acc.paketHarga += toNumber(s.paketHarga);
+      acc.labHarga += toNumber(s.labHarga);
       return acc;
     },
     { potongan: 0, bhpHarga: 0, farmasiHarga: 0, paketHarga: 0, labHarga: 0 }
   );
 
-  const totalProcedure = filteredProcedure.reduce(
-    (acc, p) => {
-      acc.totalSale += p.totalSale ?? 0;
-      acc.totalComm += p.totalComm ?? 0;
-      return acc;
-    },
-    { totalSale: 0, totalComm: 0 }
-  );
+const totalProcedure = filteredProcedure.reduce(
+  (acc, p) => {
+    acc.totalSale += toNumber(p.totalSale);
+    acc.totalComm += toNumber(p.totalComm);
+    return acc;
+  },
+  { totalSale: 0, totalComm: 0 }
+);
 
-  const totalPacket = filteredPacket.reduce(
-    (acc, p) => {
-      acc.totalSale += p.totalSale ?? 0;
-      acc.totalComm += p.totalComm ?? 0;
-      return acc;
-    },
-    { totalSale: 0, totalComm: 0 }
-  );
+const totalPacket = filteredPacket.reduce(
+  (acc, p) => {
+    acc.totalSale += toNumber(p.totalSale);
+    acc.totalComm += toNumber(p.totalComm);
+    return acc;
+  },
+  { totalSale: 0, totalComm: 0 }
+);
+
 
   const handleSaveFinance = async (data: any) => {
     try {

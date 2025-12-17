@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FaEnvelope, FaCheckCircle } from "react-icons/fa";
 import api from "@/lib/api";
+import Image from "next/image";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -54,9 +55,25 @@ export default function ForgotPasswordPage() {
 
       {step === "input" && (
         <div className="w-full max-w-[400px] transition-all duration-700 opacity-100 translate-y-0">
-          <div className="mx-auto mb-6 w-[90px] h-[90px] flex items-center justify-center rounded-full shadow-lg animate-pulse drop-shadow-sm overflow-hidden bg-linear-to-br from-pink-400 via-pink-500 to-pink-600">
-            <span className="text-white text-4xl">🦷</span>
+          <div className="
+          mx-auto mb-6
+          w-[90px] h-[90px]
+          flex items-center justify-center
+          rounded-full
+          bg-linear-to-br from-pink-400 via-pink-500 to-pink-600
+          shadow-lg
+          animate-pulse
+        ">
+          <Image
+            src="/images/putih.png"
+            alt="Logo Gigi"
+            width={48}
+            height={48}
+            className="object-contain"
+            priority
+          />
           </div>
+
 
           <h2 className="text-2xl font-bold text-pink-600 drop-shadow-sm mb-2">Lupa Password?</h2>
           <p className="text-pink-500 text-sm opacity-80 mb-6">
