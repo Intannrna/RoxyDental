@@ -148,19 +148,30 @@ export class NurseProfileService {
     const startOfDay = getStartOfDay(now);
     const endOfDay = getEndOfDay(now);
 
-    const currentSchedule = await prisma.schedule.findFirst({
+    const todayVisits = await prisma.visit.findMany({
       where: {
-        userId,
-        scheduleType: 'SHIFT',
-        startDatetime: { lte: now },
-        endDatetime: { gte: now }
+        nurseId: userId,
+        visitDate: {
+          gte: startOfDay,
+          lte: endOfDay
+        },
+        status: {
+          in: ['WAITING', 'IN_PROGRESS']
+        }
+      },
+      include: {
+        patient: {
+          select: {
+            fullName: true
+          }
+        }
       },
       orderBy: {
-        startDatetime: 'asc'
+        visitDate: 'asc'
       }
     });
 
-    if (!currentSchedule) {
+    if (todayVisits.length === 0) {
       return {
         status: 'Off Duty',
         shift: null,
@@ -168,30 +179,90 @@ export class NurseProfileService {
       };
     }
 
-    const endTime = new Date(currentSchedule.endDatetime);
-    const remainingMs = endTime.getTime() - now.getTime();
-    const remainingHours = Math.floor(remainingMs / (1000 * 60 * 60));
-    const remainingMinutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+    for (const visit of todayVisits) {
+      const visitDate = new Date(visit.visitDate);
+      const visitHours = visitDate.getHours();
+      const visitMinutes = visitDate.getMinutes();
+      
+      const visitStartTime = new Date(visitDate);
+      visitStartTime.setHours(visitHours, visitMinutes, 0, 0);
+      
+      const visitEndTime = new Date(visitStartTime);
+      visitEndTime.setMinutes(visitEndTime.getMinutes() + 30);
+      
+      if (now >= visitStartTime && now <= visitEndTime) {
+        const remainingMs = visitEndTime.getTime() - now.getTime();
+        const remainingMinutes = Math.floor(remainingMs / (1000 * 60));
+        
+        const startTimeStr = visitStartTime.toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+        
+        const endTimeStr = visitEndTime.toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+
+        return {
+          status: 'On Duty',
+          shift: {
+            patientName: visit.patient.fullName,
+            complaint: visit.chiefComplaint || 'Kunjungan Pasien',
+            startTime: startTimeStr,
+            endTime: endTimeStr,
+            location: 'POLADC'
+          },
+          remainingTime: {
+            hours: 0,
+            minutes: remainingMinutes,
+            formatted: `${remainingMinutes} menit`
+          }
+        };
+      }
+    }
+
+    const nextVisit = todayVisits[0];
+    const nextVisitDate = new Date(nextVisit.visitDate);
+    const nextVisitHours = nextVisitDate.getHours();
+    const nextVisitMinutes = nextVisitDate.getMinutes();
+    
+    const nextStartTime = new Date(nextVisitDate);
+    nextStartTime.setHours(nextVisitHours, nextVisitMinutes, 0, 0);
+    
+    const nextEndTime = new Date(nextStartTime);
+    nextEndTime.setMinutes(nextEndTime.getMinutes() + 30);
+    
+    const startTimeStr = nextStartTime.toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    
+    const endTimeStr = nextEndTime.toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+
+    const timeUntilStart = nextStartTime.getTime() - now.getTime();
+    const minutesUntilStart = Math.floor(timeUntilStart / (1000 * 60));
 
     return {
       status: 'On Duty',
       shift: {
-        startTime: new Date(currentSchedule.startDatetime).toLocaleTimeString('id-ID', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false
-        }),
-        endTime: new Date(currentSchedule.endDatetime).toLocaleTimeString('id-ID', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false
-        }),
-        location: currentSchedule.location
+        patientName: nextVisit.patient.fullName,
+        complaint: nextVisit.chiefComplaint || 'Kunjungan Pasien',
+        startTime: startTimeStr,
+        endTime: endTimeStr,
+        location: 'POLADC'
       },
       remainingTime: {
-        hours: remainingHours,
-        minutes: remainingMinutes,
-        formatted: `${remainingHours} jam ${remainingMinutes} menit`
+        hours: 0,
+        minutes: minutesUntilStart,
+        formatted: `Dimulai ${minutesUntilStart} menit lagi`
       }
     };
   }

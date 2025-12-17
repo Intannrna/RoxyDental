@@ -148,10 +148,18 @@ function MedicalStaffDashboardContent() {
                     <p className={`text-sm font-semibold ${shiftStatus?.status === 'On Duty' ? 'text-pink-700' : 'text-gray-600'}`}>
                       {shiftStatus?.status || 'Off Duty'}
                     </p>
-                    {shiftStatus?.status === 'On Duty' && shiftStatus.shift && shiftStatus.remainingTime && (
-                      <p className="text-xs text-gray-500">
-                        {shiftStatus.shift.startTime} - {shiftStatus.shift.endTime} · {shiftStatus.remainingTime.formatted} tersisa
-                      </p>
+                    {shiftStatus?.status === 'On Duty' && shiftStatus.shift && (
+                      <>
+                        <p className="text-xs font-semibold text-pink-800 mt-1">
+                          {shiftStatus.shift.patientName}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          {shiftStatus.shift.complaint}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {shiftStatus.shift.startTime} - {shiftStatus.shift.endTime}
+                        </p>
+                      </>
                     )}
                     {shiftStatus?.status !== 'On Duty' && (
                       <p className="text-xs text-gray-500">Tidak ada shift aktif</p>

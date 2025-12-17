@@ -344,7 +344,7 @@ export default function DoctorDashboard() {
                     </div>
 
                     <div className="bg-green-50 rounded-lg p-4 text-center border border-green-100">
-                      <p className="text-sm text-gray-600">Kunjungan Hari Ini</p>
+                      <p className="text-sm text-gray-600">Pasien Baru</p>
                       <p className="text-3xl font-bold text-green-600">{todayVisits || 0}</p>
                     </div>
                   </div>

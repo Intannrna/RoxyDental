@@ -29,6 +29,8 @@ export interface ProfileCompletion {
 export interface ShiftStatus {
   status: string;
   shift: {
+    patientName?: string;
+    complaint?: string;
     startTime: string;
     endTime: string;
     location: string;
