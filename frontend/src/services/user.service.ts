@@ -10,5 +10,10 @@ export const userService = {
   async updateProfile(data: Partial<UserProfile>): Promise<ApiResponse<UserProfile>> {
     const response = await apiClient.put('/users/profile', data);
     return response.data;
+  },
+
+  async deleteAccount(): Promise<ApiResponse<void>> {
+    const response = await apiClient.delete('/users/account');
+    return response.data;
   }
 };

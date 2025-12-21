@@ -21,6 +21,13 @@ router.put(
   (req, res, next) => userController.updateProfile(req, res, next)
 );
 
+router.delete(
+  '/account',
+  authMiddleware,
+  roleMiddleware(UserRole.DOKTER),
+  (req, res, next) => userController.deleteAccount(req, res, next)
+);
+
 router.get(
   '/',
   authMiddleware,

@@ -62,18 +62,27 @@ export class UserController {
   }
 
   async getProfile(req: AuthRequest, res: Response, next: NextFunction) {
-  try {
-    const profile = await userService.getProfile(req.user!.id);
-    res.json(successResponse('Profil berhasil diambil', profile));
-  } catch (error) {
-    next(error);
+    try {
+      const profile = await userService.getProfile(req.user!.id);
+      res.json(successResponse('Profil berhasil diambil', profile));
+    } catch (error) {
+      next(error);
+    }
   }
-}
 
   async updateProfile(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const profile = await userService.updateProfile(req.user!.id, req.body);
       res.json(successResponse('Profil berhasil diupdate', profile));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteAccount(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      await userService.deleteUser(req.user!.id);
+      res.json(successResponse('Akun berhasil dihapus'));
     } catch (error) {
       next(error);
     }
