@@ -121,18 +121,23 @@ export default function QueuePage() {
       <DoctorNavbar />
 
       <div className="pt-6 px-6 max-w-7xl mx-auto space-y-6">
-        <div className="flex gap-4 mb-4">
+               <div className="flex gap-4 mb-4">
           {tabs.map((tab) => {
-            const isActive = pathname.includes(tab.value);
+            const isActive = pathname === tab.href;
             return (
               <Link
                 key={tab.value}
                 href={tab.href}
-                className={`px-4 py-2 rounded-full font-medium transition ${
-                  isActive
-                    ? "bg-pink-600 text-white shadow-md"
-                    : "bg-white border border-pink-200 text-pink-600 hover:bg-pink-50"
-                }`}
+                className={`
+                  px-6 py-3 rounded-full
+                  text-sm font-semibold
+                  transition-all duration-200
+                  ${
+                    isActive
+                      ? "bg-pink-600 text-white shadow-lg"
+                      : "bg-white text-pink-600 border border-pink-300 hover:bg-pink-50"
+                  }
+                `}
               >
                 {tab.label}
               </Link>
@@ -140,8 +145,9 @@ export default function QueuePage() {
           })}
         </div>
 
-        <h1 className="text-2xl font-bold text-pink-900">Daftar Antrian</h1>
 
+        <h1 className="text-2xl font-bold text-pink-900">Daftar Antrian</h1>
+        
         <div className="mb-4 w-full flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 w-full max-w-sm">
             <Search className="w-5 h-5 text-pink-400" />

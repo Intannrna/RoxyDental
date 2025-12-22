@@ -31,6 +31,7 @@ export default function RegisterPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
+    // Jika sudah terautentikasi, arahkan keluar dari halaman registrasi (hindari redirect ke /register lagi)
     if (!authLoading && isAuthenticated) {
       router.push('/');
     }
@@ -61,6 +62,7 @@ export default function RegisterPage() {
         return false;
       }
 
+      // 3️⃣ Validasi email
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
         setError("Format email tidak valid");
         return false;
@@ -132,6 +134,7 @@ export default function RegisterPage() {
         <div className="min-h-screen w-full flex flex-col lg:flex-row">
           <div className="hidden lg:flex relative flex-col justify-center items-center lg:w-2/5 overflow-hidden">
 
+      {/* Background Image */}
       <Image
         src="/images/perawat.jpg"
         alt="POLADC Background"

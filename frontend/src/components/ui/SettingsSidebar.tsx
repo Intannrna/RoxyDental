@@ -52,10 +52,15 @@ export default function SettingsSidebar({ activeMenu, setActiveMenu, onLogout }:
       <Card className="shadow-md bg-pink-50 border border-pink-200">
         <CardContent className="p-5">
           {/* Header */}
-          <div className="mt-4 mb-6">
-            <h2 className="font-bold text-pink-900 text-lg mb-2">Menu Pengaturan</h2>
-            <p className="text-sm text-pink-600">Pilih kategori pengaturan</p>
-          </div>
+           <div className="mt-6 mb-6">
+          <h2 className="text-base font-semibold text-pink-900 tracking-tight">
+            Menu Pengaturan
+          </h2>
+          <p className="mt-1 text-sm text-pink-500">
+            Pilih kategori pengaturan
+          </p>
+          <div className="mt-2 h-px w-full bg-pink-200" />
+        </div>
 
           {/* Menu Items */}
           <div className="space-y-3">

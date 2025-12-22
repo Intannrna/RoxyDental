@@ -92,58 +92,22 @@ export default function SettingsSidebar({ activeMenu, setActiveMenu }: Props) {
     <>
       <Card className="shadow-md bg-pink-50 border border-pink-200">
         <CardContent className="p-5">
-          {/* Profile Summary */}
-          <div className="mt-4 mb-6 pb-4 border-b border-pink-200">
-            {loading ? (
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-pink-200 animate-pulse" />
-                <div className="flex-1">
-                  <div className="h-4 bg-pink-200 rounded animate-pulse mb-2" />
-                  <div className="h-3 bg-pink-200 rounded animate-pulse w-2/3" />
-                </div>
-              </div>
-            ) : error ? (
-              <div className="flex items-center gap-2 text-pink-600">
-                <AlertCircle className="w-5 h-5" />
-                <span className="text-sm">Gagal memuat profil</span>
-              </div>
-            ) : profile ? (
-              <div className="flex items-center gap-3">
-                {profile.profilePhoto ? (
-                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-pink-300">
-                    <img 
-                      src={profile.profilePhoto} 
-                      alt="Profile" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-pink-200 flex items-center justify-center">
-                    <User className="w-6 h-6 text-pink-600" />
-                  </div>
-                )}
-                <div>
-                  <h3 className="font-bold text-pink-900 text-sm">
-                    {profile.fullName}
-                  </h3>
-                  <p className="text-xs text-pink-600">
-                    {profile.role === 'PERAWAT' ? 'Perawat' : 'Tenaga Medis'}
-                  </p>
-                  {profile.specialization && (
-                    <p className="text-xs text-pink-500 mt-0.5">
-                      {profile.specialization}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ) : null}
-          </div>
-
           {/* Header */}
-          <div className="mb-6">
-            <h2 className="font-bold text-pink-900 text-lg mb-1">Pengaturan</h2>
-            <p className="text-sm text-pink-600">Kelola akun dan preferensi</p>
-          </div>
+       <div className="mt-6 mb-6">
+          <h2 className="text-base font-semibold text-pink-900 tracking-tight">
+            Menu Pengaturan
+          </h2>
+          <p className="mt-1 text-sm text-pink-500">
+            Pilih kategori pengaturan
+          </p>
+          <div className="mt-2 h-px w-full bg-pink-200" />
+        </div>
+
+
+
+
+
+
 
           {/* Menu Items */}
           <div className="space-y-2">

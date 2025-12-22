@@ -91,14 +91,14 @@ function DashboardContent() {
         <Card className="bg-linear-to-br from-pink-50 to-pink-25 border-none shadow-md">
           <CardContent className="p-6 flex items-start justify-between">
             <div className="flex gap-4">
-              <div className="w-32 h-32 bg-white rounded-2xl border-4 border-yellow-400 overflow-hidden flex items-center justify-center shadow-sm">
+              <div className="w-32 h-32 bg-white rounded-2xl border-4 border-yellow-400 overflow-hidden flex items-center justify-center shadow-sm mt-5">
                 {profile.profilePhoto ? (
                   <img src={profile.profilePhoto} alt="Profile" className="w-32 h-32 object-cover rounded-2xl" />
                 ) : (
                   <User className="w-20 h-20 text-gray-300" />
                 )}
               </div>
-              <div className="flex flex-col justify-center">
+              <div className="flex flex-col justify-center mt-5">
                 <h2 className="text-2xl font-bold text-gray-900">{profile.fullName}</h2>
                 <p className="text-gray-600 mt-1 text-sm">Perawat</p>
 

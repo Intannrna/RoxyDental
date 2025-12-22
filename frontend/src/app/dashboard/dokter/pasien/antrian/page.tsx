@@ -1,6 +1,5 @@
 "use client";
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
@@ -20,23 +19,14 @@ export default function QueuePage() {
   const [loading, setLoading] = useState(false);
   const [doctor, setDoctor] = useState<any | null>(null); // dokter yang login
 
-  const tabs = [
-    {
-      label: "Daftar Pasien",
-      value: "daftar-pasien",
-      href: "/dashboard/dokter/pasien/daftar-pasien",
-    },
-    {
-      label: "Daftar Antrian",
-      value: "daftar-antrian",
-      href: "/dashboard/dokter/pasien/antrian",
-    },
-    {
-      label: "Rekam Medis",
-      value: "rekam-medis",
-      href: "/dashboard/dokter/pasien/rekam-medis",
-    },
-  ];
+  const tabs = useMemo(
+      () => [
+        { label: "Daftar Pasien", value: "daftar-pasien", href: "/dashboard/dokter/pasien/daftar-pasien" },
+        { label: "Daftar Antrian", value: "daftar-antrian", href: "/dashboard/dokter/pasien/antrian" },
+        { label: "Rekam Medis", value: "rekam-medis", href: "/dashboard/dokter/pasien/rekam-medis" }
+      ],
+      []
+    );
 
   // Ambil user yang sedang login (role: DOKTER)
   useEffect(() => {
@@ -108,22 +98,28 @@ export default function QueuePage() {
         {/* Tabs */}
         <div className="flex gap-4 mb-4">
           {tabs.map((tab) => {
-            const isActive = pathname.includes(tab.value);
+            const isActive = pathname === tab.href;
             return (
               <Link
                 key={tab.value}
                 href={tab.href}
-                className={`px-4 py-2 rounded-full font-medium transition ${
-                  isActive
-                    ? "bg-pink-600 text-white shadow-md"
-                    : "bg-white border border-pink-200 text-pink-600 hover:bg-pink-50"
-                }`}
+                className={`
+                  px-6 py-3 rounded-full
+                  text-sm font-semibold
+                  transition-all duration-200
+                  ${
+                    isActive
+                      ? "bg-pink-600 text-white shadow-lg"
+                      : "bg-white text-pink-600 border border-pink-300 hover:bg-pink-50"
+                  }
+                `}
               >
                 {tab.label}
               </Link>
             );
           })}
         </div>
+
 
         <h1 className="text-2xl font-bold text-pink-900">Daftar Antrian</h1>
 
