@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { GraduationCap, Briefcase, Award, MapPin, FileText, BarChart3, TrendingUp } from 'lucide-react';
 import DoctorNavbar from '@/components/ui/navbardr';
 import PredictionModal from "@/components/ui/PredictionModal";
+import TikaChatbot from '@/components/ui/TikaChatbot';
 import {
   User,
   Calendar,
@@ -59,91 +60,94 @@ export default function DoctorDashboard() {
       <DoctorNavbar />
 
       <div className="p-6">
-        <Card className="mb-6 bg-linear-to-br from-pink-50 to-pink-25 border-none shadow-md">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex gap-4">
-                <div className="w-32 h-32 bg-white rounded-2xl border-4 border-yellow-400 overflow-hidden flex items-center justify-center shadow-sm">
-                  {profile?.profilePhoto ? (
-                    <img src={profile.profilePhoto} alt={profile.fullName} className="w-full h-full object-cover" />
-                  ) : (
-                    <User className="w-20 h-20 text-gray-300" />
-                  )}
-                </div>
-                <div className="flex flex-col justify-center">
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {profile?.fullName || 'drg. Nama Dokter'}
-                  </h2>
-                  <p className="text-gray-600 flex items-center gap-2 mt-1">
-                    <span className="text-sm">{profile?.specialization || 'Dokter Gigi'}</span>
-                  </p>
+     <Card className="mb-6 bg-linear-to-br from-pink-50 to-pink-25 border-none shadow-md rounded-2xl">
+      <CardContent className="p-6">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+          
+          {/* Foto Dokter */}
+          <div className="w-40 h-40 md:w-44 md:h-44 bg-white rounded-2xl border-4 border-yellow-400 overflow-hidden flex items-center justify-center shadow-sm shrink-0 mt-6">
+            {profile?.profilePhoto ? (
+              <img src={profile.profilePhoto} alt={profile.fullName} className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-24 h-24 text-gray-300" />
+            )}
+          </div>
 
-                  <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
-                    <MapPin className="w-4 h-4" />
-                    <span>Tempat Praktik</span>
-                  </div>
+          {/* Info Dokter */}
+          <div className="flex flex-col justify-start flex-1 mt-6">
+            <h2 className="text-2xl font-bold text-gray-900">
+              {profile?.fullName || 'drg. Nama Dokter'}
+            </h2>
 
-                  <Badge className="mt-2 bg-pink-100 text-pink-700 border-none hover:bg-pink-100 w-fit">
-                    {practiceStatus === 'ACTIVE' ? 'Aktif' : 'Tidak Aktif'}
-                  </Badge>
-                </div>
-              </div>
+            <p className="text-gray-600 flex items-center gap-2 mt-2">
+              <span className="text-sm">{profile?.specialization || 'Dokter Gigi'}</span>
+            </p>
 
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => setShowPredictionModal(true)}
-                  className="bg-[#E91E63] hover:bg-[#C2185B] text-white shadow-md"
-                >
-                  <Activity className="w-4 h-4 mr-2" />
-                  Prediksi
-                </Button>
-              </div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
+              <MapPin className="w-4 h-4" />
+              <span>Tempat Praktik</span>
             </div>
-          </CardContent>
-        </Card>
+
+            <Badge className="mt-3 bg-pink-100 text-pink-700 border-none w-fit">
+              {practiceStatus === 'ACTIVE' ? 'Aktif' : 'Tidak Aktif'}
+            </Badge>
+
+            {/* Tombol Prediksi */}
+            <div className="mt-4">
+              <Button
+                onClick={() => setShowPredictionModal(true)}
+                className="flex items-center bg-pink-600 hover:bg-pink-700 text-white shadow-md px-4 py-2 rounded-md transition-colors"
+              >
+                <Activity className="w-4 h-4 mr-2" />
+                Prediksi
+              </Button>
+            </div>
+          </div>
+
+        </div>
+      </CardContent>
+    </Card>
+
 
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Data Kunjungan</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="shadow-md border-none bg-white hover:shadow-lg transition-shadow">
-              <CardContent className="p-5 min-h-[140px] flex flex-col justify-center">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Total Kunjungan</p>
-                    <p className="text-2xl font-bold text-gray-900">{totalVisits || 0}</p>
-                  </div>
-                  <div className="w-12 h-12 bg-[#FFF0F5] rounded-lg flex items-center justify-center">
-                    <Users className="w-6 h-6 text-[#E91E63]" />
-                  </div>
+            {/* Total Kunjungan */}
+            <Card className="shadow-md border-none bg-white hover:shadow-lg transition-shadow rounded-lg">
+              <CardContent className="p-5 min-h-[140px] flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Kunjungan</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalVisits || 0}</p>
+                </div>
+                <div className="w-12 h-12 bg-[#FFF0F5] rounded-lg flex items-center justify-center">
+                  <Users className="w-6 h-6 text-[#E91E63]" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="shadow-md border-none bg-white hover:shadow-lg transition-shadow">
-              <CardContent className="p-5 min-h-[140px] flex flex-col justify-center">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Kunjungan Hari Ini</p>
-                    <p className="text-2xl font-bold text-gray-900">{todayVisits || 0}</p>
-                  </div>
-                  <div className="w-12 h-12 bg-[#FFF0F5] rounded-lg flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-[#E91E63]" />
-                  </div>
+            {/* Kunjungan Hari Ini */}
+            <Card className="shadow-md border-none bg-white hover:shadow-lg transition-shadow rounded-lg">
+              <CardContent className="p-5 min-h-[140px] flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Kunjungan Hari Ini</p>
+                  <p className="text-2xl font-bold text-gray-900">{todayVisits || 0}</p>
+                </div>
+                <div className="w-12 h-12 bg-[#FFF0F5] rounded-lg flex items-center justify-center">
+                  <Calendar className="w-6 h-6 text-[#E91E63]" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="shadow-md border-none bg-white hover:shadow-lg transition-shadow">
-              <CardContent className="p-5 min-h-[140px] flex flex-col justify-center">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Kunjungan Bulan Ini</p>
-                    <p className="text-2xl font-bold text-gray-900">{monthlyVisits || 0}</p>
-                  </div>
-                  <div className="w-12 h-12 bg-[#FFF0F5] rounded-lg flex items-center justify-center">
-                    <Activity className="w-6 h-6 text-[#E91E63]" />
-                  </div>
+            {/* Kunjungan Bulan Ini */}
+            <Card className="shadow-md border-none bg-white hover:shadow-lg transition-shadow rounded-lg">
+              <CardContent className="p-5 min-h-[140px] flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Kunjungan Bulan Ini</p>
+                  <p className="text-2xl font-bold text-gray-900">{monthlyVisits || 0}</p>
+                </div>
+                <div className="w-12 h-12 bg-[#FFF0F5] rounded-lg flex items-center justify-center">
+                  <Activity className="w-6 h-6 text-[#E91E63]" />
                 </div>
               </CardContent>
             </Card>
@@ -249,6 +253,8 @@ export default function DoctorDashboard() {
       )}
 
       </div>
+
+            <TikaChatbot />
     </div>
   );
 }
