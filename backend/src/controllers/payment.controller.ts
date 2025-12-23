@@ -24,6 +24,16 @@ export class PaymentController {
     }
   }
 
+  async getAllPayments(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { search } = req.query;
+      const payments = await paymentService.getAllPayments(search as string);
+      res.json(successResponse('Daftar pembayaran berhasil diambil', payments));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getPaymentById(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const payment = await paymentService.getPaymentById(req.params.id);

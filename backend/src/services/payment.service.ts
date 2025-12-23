@@ -11,26 +11,79 @@ interface CreatePaymentData {
   notes?: string;
 }
 
+interface PaymentWithRelations {
+  id: string;
+  visitId: string;
+  paymentNumber: string;
+  paymentDate: string;
+  paymentMethod: PaymentMethod;
+  amount: number;
+  paidAmount: number;
+  changeAmount: number;
+  status: PaymentStatus;
+  referenceNumber?: string;
+  notes?: string;
+  createdAt: string;
+  visit: {
+    id: string;
+    visitNumber: string;
+    visitDate: string;
+    patient: {
+      id: string;
+      patientNumber: string;
+      medicalRecordNumber: string | null;
+      fullName: string;
+    };
+  };
+}
+
 export class PaymentService {
-  async createPayment(data: CreatePaymentData) {
+  private async generatePaymentNumber(): Promise<string> {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+
+    const lastPayment = await prisma.payment.findFirst({
+      where: {
+        paymentNumber: {
+          startsWith: `PAY-${year}${month}`
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    let sequence = 1;
+    if (lastPayment) {
+      const lastSequence = parseInt(lastPayment.paymentNumber.split('-')[2]);
+      sequence = lastSequence + 1;
+    }
+
+    return `PAY-${year}${month}-${String(sequence).padStart(4, '0')}`;
+  }
+
+  async createPayment(data: CreatePaymentData): Promise<PaymentWithRelations> {
     const visit = await prisma.visit.findUnique({
-      where: { id: data.visitId }
+      where: { id: data.visitId },
+      include: {
+        patient: {
+          select: {
+            id: true,
+            patientNumber: true,
+            medicalRecordNumber: true,
+            fullName: true
+          }
+        }
+      }
     });
 
     if (!visit) {
       throw new AppError('Kunjungan tidak ditemukan', 404);
     }
 
-    // Generate payment number
-    const lastPayment = await prisma.payment.findFirst({
-      orderBy: { createdAt: 'desc' }
-    });
-
-    const paymentNumber = lastPayment
-      ? `PAY${parseInt(lastPayment.paymentNumber.substring(3)) + 1}`
-      : 'PAY1000';
-
-    const changeAmount = data.paidAmount - data.amount;
+    const paymentNumber = await this.generatePaymentNumber();
+    const changeAmount = Math.max(data.paidAmount - data.amount, 0);
     const status = data.paidAmount >= data.amount ? PaymentStatus.PAID : PaymentStatus.PARTIAL;
 
     const payment = await prisma.payment.create({
@@ -41,7 +94,7 @@ export class PaymentService {
         paymentMethod: data.paymentMethod,
         amount: data.amount,
         paidAmount: data.paidAmount,
-        changeAmount: changeAmount > 0 ? changeAmount : 0,
+        changeAmount,
         status,
         referenceNumber: data.referenceNumber,
         notes: data.notes
@@ -51,6 +104,9 @@ export class PaymentService {
           include: {
             patient: {
               select: {
+                id: true,
+                patientNumber: true,
+                medicalRecordNumber: true,
                 fullName: true
               }
             }
@@ -59,7 +115,31 @@ export class PaymentService {
       }
     });
 
-    return payment;
+    return {
+      id: payment.id,
+      visitId: payment.visitId,
+      paymentNumber: payment.paymentNumber,
+      paymentDate: payment.paymentDate.toISOString(),
+      paymentMethod: payment.paymentMethod,
+      amount: payment.amount.toNumber(),
+      paidAmount: payment.paidAmount.toNumber(),
+      changeAmount: payment.changeAmount.toNumber(),
+      status: payment.status,
+      referenceNumber: payment.referenceNumber || undefined,
+      notes: payment.notes || undefined,
+      createdAt: payment.createdAt.toISOString(),
+      visit: {
+        id: payment.visit.id,
+        visitNumber: payment.visit.visitNumber,
+        visitDate: payment.visit.visitDate.toISOString(),
+        patient: {
+          id: payment.visit.patient.id,
+          patientNumber: payment.visit.patient.patientNumber,
+          medicalRecordNumber: payment.visit.patient.medicalRecordNumber,
+          fullName: payment.visit.patient.fullName
+        }
+      }
+    };
   }
 
   async getPaymentsByVisit(visitId: string) {
@@ -68,7 +148,69 @@ export class PaymentService {
       orderBy: { paymentDate: 'desc' }
     });
 
-    return payments;
+    return payments.map(p => ({
+      ...p,
+      amount: p.amount.toNumber(),
+      paidAmount: p.paidAmount.toNumber(),
+      changeAmount: p.changeAmount.toNumber()
+    }));
+  }
+
+  async getAllPayments(search?: string) {
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { paymentNumber: { contains: search, mode: 'insensitive' } },
+        { visit: { visitNumber: { contains: search, mode: 'insensitive' } } },
+        { visit: { patient: { fullName: { contains: search, mode: 'insensitive' } } } }
+      ];
+    }
+
+    const payments = await prisma.payment.findMany({
+      where,
+      include: {
+        visit: {
+          include: {
+            patient: {
+              select: {
+                id: true,
+                patientNumber: true,
+                medicalRecordNumber: true,
+                fullName: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return payments.map(p => ({
+      id: p.id,
+      visitId: p.visitId,
+      paymentNumber: p.paymentNumber,
+      paymentDate: p.paymentDate.toISOString(),
+      paymentMethod: p.paymentMethod,
+      amount: p.amount.toNumber(),
+      paidAmount: p.paidAmount.toNumber(),
+      changeAmount: p.changeAmount.toNumber(),
+      status: p.status,
+      referenceNumber: p.referenceNumber,
+      notes: p.notes,
+      createdAt: p.createdAt.toISOString(),
+      visit: {
+        id: p.visit.id,
+        visitNumber: p.visit.visitNumber,
+        visitDate: p.visit.visitDate.toISOString(),
+        patient: {
+          id: p.visit.patient.id,
+          patientNumber: p.visit.patient.patientNumber,
+          medicalRecordNumber: p.visit.patient.medicalRecordNumber,
+          fullName: p.visit.patient.fullName
+        }
+      }
+    }));
   }
 
   async getPaymentById(id: string) {
@@ -87,6 +229,11 @@ export class PaymentService {
       throw new AppError('Pembayaran tidak ditemukan', 404);
     }
 
-    return payment;
+    return {
+      ...payment,
+      amount: payment.amount.toNumber(),
+      paidAmount: payment.paidAmount.toNumber(),
+      changeAmount: payment.changeAmount.toNumber()
+    };
   }
 }

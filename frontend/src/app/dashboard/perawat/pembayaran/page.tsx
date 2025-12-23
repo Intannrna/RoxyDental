@@ -1,39 +1,20 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Plus, ReceiptText, CreditCard, Wallet, ArrowLeft, ArrowRight } from "lucide-react";
 import InputPembayaran from "@/components/ui/addpembayaran";
 import DoctorNavbar from "@/components/ui/navbarpr";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  paymentService, 
+  Payment, 
+  CreatePaymentData,
+  PaymentMethodType 
+} from "@/services/payment.service";
 
-/* =======================
-   TYPE DATA
-======================= */
-interface Payment {
-  id: string;
-  patientName: string;
-  visitNumber: string;
-  totalBill: number;
-  paymentMethod: string;
-  amountPaid: number;
-  change: number;
-  note?: string;
-  createdAt: string;
-}
-
-interface PaymentForm {
-  visitId: string;
-  totalTagihan: number;
-  metode: string;
-  jumlahBayar: number;
-  catatan: string;
-}
-
-/* =======================
-   CONSTANT
-======================= */
 const PAGE_SIZE = 10;
 
 const formatCurrency = (v: number) => `Rp ${v.toLocaleString("id-ID")}`;
@@ -43,7 +24,7 @@ const formatDate = (iso: string) =>
 function methodLabel(m: string) {
   const x = (m || "").toLowerCase();
   if (x === "cash") return "Cash";
-  if (x === "debit") return "Debit";
+  if (x === "card") return "Debit/Credit";
   if (x === "qris") return "QRIS";
   if (x === "transfer") return "Transfer";
   return m || "-";
@@ -55,7 +36,7 @@ function MethodBadge({ method }: { method: string }) {
     "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold";
 
   if (m === "cash") return <span className={`${base} bg-pink-50 text-pink-700 border-pink-200`}><Wallet className="w-3 h-3" />Cash</span>;
-  if (m === "debit") return <span className={`${base} bg-purple-50 text-purple-700 border-purple-200`}><CreditCard className="w-3 h-3" />Debit</span>;
+  if (m === "card") return <span className={`${base} bg-purple-50 text-purple-700 border-purple-200`}><CreditCard className="w-3 h-3" />Debit/Credit</span>;
   if (m === "qris") return <span className={`${base} bg-emerald-50 text-emerald-700 border-emerald-200`}><ReceiptText className="w-3 h-3" />QRIS</span>;
   if (m === "transfer") return <span className={`${base} bg-blue-50 text-blue-700 border-blue-200`}><CreditCard className="w-3 h-3" />Transfer</span>;
 
@@ -63,34 +44,50 @@ function MethodBadge({ method }: { method: string }) {
 }
 
 export default function PaymentPage() {
-  const [payments, setPayments] = useState<Payment[]>([
-    {
-      id: "1",
-      patientName: "Intan Nuraeini",
-      visitNumber: "KJ-2025-001",
-      totalBill: 250000,
-      paymentMethod: "cash",
-      amountPaid: 300000,
-      change: 50000,
-      note: "Lunas",
-      createdAt: "2025-12-01T10:20:00",
-    },
-  ]);
-
+  const { toast } = useToast();
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
 
-  /* =======================
-     FILTER
-  ======================= */
+  useEffect(() => {
+    fetchPayments();
+  }, []);
+
+  const fetchPayments = async () => {
+    setLoading(true);
+    try {
+      const data = await paymentService.getAllPayments(search);
+      setPayments(data);
+    } catch (error: any) {
+      console.error("Error fetching payments:", error);
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message || "Gagal mengambil data pembayaran",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchPayments();
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [search]);
+
   const filteredPayments = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (!q) return payments;
     return payments.filter(
       (p) =>
-        p.patientName.toLowerCase().includes(q) ||
-        p.visitNumber.toLowerCase().includes(q)
+        p.visit.patient.fullName.toLowerCase().includes(q) ||
+        p.visit.visitNumber.toLowerCase().includes(q) ||
+        p.paymentNumber.toLowerCase().includes(q)
     );
   }, [search, payments]);
 
@@ -101,51 +98,54 @@ export default function PaymentPage() {
     page * PAGE_SIZE
   );
 
-  /* =======================
-     TOTAL
-  ======================= */
   const total = useMemo(() => {
     return filteredPayments.reduce(
       (acc, p) => {
-        acc.totalBill += p.totalBill;
-        acc.amountPaid += p.amountPaid;
-        acc.change += p.change;
+        acc.totalBill += p.amount;
+        acc.amountPaid += p.paidAmount;
+        acc.change += p.changeAmount;
         return acc;
       },
       { totalBill: 0, amountPaid: 0, change: 0 }
     );
   }, [filteredPayments]);
 
-  /* =======================
-     SAVE PEMBAYARAN
-  ======================= */
-  const handleSavePayment = (data: PaymentForm) => {
-    const newPayment: Payment = {
-      id: Date.now().toString(),
-      patientName: data.visitId, // sementara dari input (nanti mapping dari visit)
-      visitNumber: data.visitId,
-      totalBill: data.totalTagihan,
-      paymentMethod: data.metode,
-      amountPaid: data.jumlahBayar,
-      change: Math.max(data.jumlahBayar - data.totalTagihan, 0),
-      note: data.catatan,
-      createdAt: new Date().toISOString(),
-    };
+  const handleSavePayment = async (formData: any) => {
+    try {
+      const paymentData: CreatePaymentData = {
+        visitId: formData.visitId,
+        paymentMethod: formData.metode as PaymentMethodType,
+        amount: formData.totalTagihan,
+        paidAmount: formData.jumlahBayar,
+        referenceNumber: formData.nomorReferensi || undefined,
+        notes: formData.catatan || undefined
+      };
 
-    setPayments((prev) => [newPayment, ...prev]);
-    setShowModal(false);
-    setPage(1);
+      await paymentService.createPayment(paymentData);
+
+      toast({
+        title: "Berhasil",
+        description: "Pembayaran berhasil disimpan",
+      });
+
+      setShowModal(false);
+      fetchPayments();
+      setPage(1);
+    } catch (error: any) {
+      console.error("Error saving payment:", error);
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message || "Gagal menyimpan pembayaran",
+        variant: "destructive",
+      });
+    }
   };
 
-  /* =======================
-     UI
-  ======================= */
   return (
     <div className="min-h-screen bg-linear-to-b from-[#FFF5F7] via-white to-white">
       <DoctorNavbar />
 
       <div className="max-w-6xl mx-auto px-4 pb-10 pt-6">
-        {/* HERO HEADER */}
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-pink-200 bg-white/70 px-3 py-1 text-xs font-semibold text-pink-700 shadow-sm">
@@ -170,14 +170,12 @@ export default function PaymentPage() {
           </Button>
         </div>
 
-        {/* TOOLBAR */}
         <Card className="rounded-2xl border-pink-100 shadow-sm mb-5">
           <CardContent className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            {/* SEARCH */}
             <div className="relative w-full md:max-w-md mt-5">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-pink-400" />
               <Input
-                placeholder="Cari nama pasien / nomor kunjungan"
+                placeholder="Cari nama pasien / nomor kunjungan / nomor pembayaran"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -187,14 +185,12 @@ export default function PaymentPage() {
               />
             </div>
 
-            {/* INFO */}
             <div className="text-xs text-gray-500">
               Menampilkan <b className="text-gray-700">{filteredPayments.length}</b> transaksi
             </div>
           </CardContent>
         </Card>
 
-        {/* TABLE */}
         <Card className="rounded-2xl border-pink-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -202,13 +198,14 @@ export default function PaymentPage() {
                 <tr>
                   {[
                     "TANGGAL",
+                    "NO. PEMBAYARAN",
                     "PASIEN",
-                    "NO KUNJUNGAN",
+                    "NO. KUNJUNGAN",
                     "TOTAL TAGIHAN",
                     "METODE",
                     "JUMLAH BAYAR",
                     "KEMBALIAN",
-                    "CATATAN",
+                    "STATUS",
                   ].map((h) => (
                     <th
                       key={h}
@@ -221,9 +218,17 @@ export default function PaymentPage() {
               </thead>
 
               <tbody className="bg-white divide-y divide-pink-100">
-                {displayedPayments.length === 0 ? (
+                {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-500">
+                    <td colSpan={9} className="px-4 py-10 text-center">
+                      <div className="flex justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600" />
+                      </div>
+                    </td>
+                  </tr>
+                ) : displayedPayments.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-500">
                       Tidak ada data pembayaran untuk filter saat ini.
                     </td>
                   </tr>
@@ -234,14 +239,18 @@ export default function PaymentPage() {
                         {formatDate(p.createdAt)}
                       </td>
 
-                      <td className="px-4 py-3 font-semibold text-gray-900">
-                        {p.patientName}
+                      <td className="px-4 py-3 font-semibold text-pink-700">
+                        {p.paymentNumber}
                       </td>
 
-                      <td className="px-4 py-3 text-gray-700">{p.visitNumber}</td>
+                      <td className="px-4 py-3 font-semibold text-gray-900">
+                        {p.visit.patient.fullName}
+                      </td>
+
+                      <td className="px-4 py-3 text-gray-700">{p.visit.visitNumber}</td>
 
                       <td className="px-4 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">
-                        {formatCurrency(p.totalBill)}
+                        {formatCurrency(p.amount)}
                       </td>
 
                       <td className="px-4 py-3">
@@ -249,15 +258,29 @@ export default function PaymentPage() {
                       </td>
 
                       <td className="px-4 py-3 text-right text-gray-900 whitespace-nowrap">
-                        {formatCurrency(p.amountPaid)}
+                        {formatCurrency(p.paidAmount)}
                       </td>
 
                       <td className="px-4 py-3 text-right text-gray-900 whitespace-nowrap">
-                        {formatCurrency(p.change)}
+                        {formatCurrency(p.changeAmount)}
                       </td>
 
-                      <td className="px-4 py-3 text-gray-700">
-                        {p.note || "-"}
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            p.status === "PAID"
+                              ? "bg-green-100 text-green-700 border border-green-200"
+                              : p.status === "PARTIAL"
+                              ? "bg-yellow-100 text-yellow-700 border border-yellow-200"
+                              : "bg-gray-100 text-gray-700 border border-gray-200"
+                          }`}
+                        >
+                          {p.status === "PAID"
+                            ? "Lunas"
+                            : p.status === "PARTIAL"
+                            ? "Sebagian"
+                            : p.status}
+                        </span>
                       </td>
                     </tr>
                   ))
@@ -266,7 +289,7 @@ export default function PaymentPage() {
 
               <tfoot className="bg-pink-50 font-semibold">
                 <tr>
-                  <td colSpan={3} className="px-4 py-3 text-gray-800">
+                  <td colSpan={4} className="px-4 py-3 text-gray-800">
                     TOTAL
                   </td>
                   <td className="px-4 py-3 text-right text-gray-900">
@@ -285,7 +308,6 @@ export default function PaymentPage() {
             </table>
           </div>
 
-          {/* PAGINATION */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-4 py-3 border-t border-pink-100 bg-white">
             <div className="text-xs text-gray-500">
               Page <b className="text-gray-700">{page}</b> of{" "}
@@ -319,7 +341,6 @@ export default function PaymentPage() {
         </Card>
       </div>
 
-      {/* MODAL INPUT PEMBAYARAN */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div

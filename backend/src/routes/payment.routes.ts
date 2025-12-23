@@ -7,8 +7,9 @@ import { createPaymentSchema } from '../validators/payment.validator';
 const router = Router();
 const paymentController = new PaymentController();
 
-router.post('/', authMiddleware, validate(createPaymentSchema), paymentController.createPayment);
-router.get('/visit/:visitId', authMiddleware, paymentController.getPaymentsByVisit);
-router.get('/:id', authMiddleware, paymentController.getPaymentById);
+router.post('/', authMiddleware, validate(createPaymentSchema), paymentController.createPayment.bind(paymentController));
+router.get('/', authMiddleware, paymentController.getAllPayments.bind(paymentController));
+router.get('/visit/:visitId', authMiddleware, paymentController.getPaymentsByVisit.bind(paymentController));
+router.get('/:id', authMiddleware, paymentController.getPaymentById.bind(paymentController));
 
 export default router;
