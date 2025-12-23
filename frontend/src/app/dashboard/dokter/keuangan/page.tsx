@@ -1092,9 +1092,11 @@ export default function CommissionReportPage() {
               onClick={() => setShowModal(false)}
               aria-hidden
             />
-            <div className="relative z-10 w-full max-w-2xl mx-auto">
-              <div className="rounded-lg shadow-lg overflow-hidden bg-white">
-                <div className="flex items-center justify-between px-4 py-3 border-b">
+            <div className="relative z-10 w-full max-w-xl mx-auto">
+              <div className="bg-white rounded-lg shadow-lg border border-pink-100">
+                
+                {/* Header kecil & mepet */}
+                <div className="flex items-center justify-between px-3 py-2 border-b border-pink-100">
                   <h3 className="text-sm font-semibold text-pink-700">
                     {modalMode === "medical"
                       ? "Tambah Laporan Keuangan"
@@ -1102,27 +1104,33 @@ export default function CommissionReportPage() {
                       ? "Tambah Prosedur"
                       : "Tambah Paket"}
                   </h3>
+
                   <button
+                    type="button"
                     onClick={() => setShowModal(false)}
-                    className="text-pink-600 text-xs px-2 py-1 hover:bg-pink-50 rounded"
+                    className="h-7 w-7 flex items-center justify-center rounded-md text-pink-600 hover:bg-pink-50 active:bg-pink-100 transition"
+                    aria-label="Tutup"
                   >
-                    Close
+                    ✕
                   </button>
                 </div>
 
-                <div className="p-1">
+                {/* Body – tanpa scroll, mepet */}
+                <div className="p-0">
                   {modalMode === "medical" && (
                     <AddFinance
                       onClose={() => setShowModal(false)}
                       handleSave={handleSaveFinance}
                     />
                   )}
+
                   {modalMode === "procedure" && (
                     <AddProcedure
                       onClose={() => setShowModal(false)}
                       handleSave={handleSaveProcedure}
                     />
                   )}
+
                   {modalMode === "packet" && (
                     <AddPacket
                       onClose={() => setShowModal(false)}

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useMemo, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ClipboardList, Hash, Boxes, Wallet, Percent, X } from "lucide-react";
 
 interface ProcedureData {
   name: string;
@@ -9,7 +11,7 @@ interface ProcedureData {
   quantity: number;
   salePrice: number;
   modalPrice: number;
-  avgComm: string; // tetap string
+  avgComm: string; // tetap string (sesuai kebutuhan kamu)
 }
 
 interface Props {
@@ -17,147 +19,315 @@ interface Props {
   handleSave: (data: ProcedureData) => void;
 }
 
-export default function AddProcedure({ onClose, handleSave }: Props) {
-  const [form, setForm] = useState<ProcedureData>({
-    name: "",
-    code: "",
-    quantity: 0,
-    salePrice: 0,
-    modalPrice: 0,
-    avgComm: "0", // default string
-  });
+// UI state khusus input agar enak (boleh kosong)
+type ProcedureFormUI = {
+  name: string;
+  code: string;
+  quantity: string;
+  salePrice: string;
+  modalPrice: string;
+  avgComm: string; // string %
+};
 
-  const update = (key: keyof ProcedureData, value: string | number) =>
-    setForm({ ...form, [key]: value });
+const onlyDigits = (v: string) => v.replace(/[^\d]/g, "");
+const toNum = (v: string) => (onlyDigits(v) === "" ? 0 : Number(onlyDigits(v)));
 
-  // perhitungan dengan konversi string ke number untuk avgComm
-  const totalPenjualan = form.quantity * form.salePrice;
-  const totalModal = form.quantity * form.modalPrice;
-  const totalKomisi = Math.round((totalPenjualan * Number(form.avgComm)) / 100);
-  const totalBayar = totalPenjualan - totalKomisi;
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  icon,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold text-pink-900">{label}</span>
+      <div className="relative mt-1">
+        {icon ? (
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-600">
+            {icon}
+          </span>
+        ) : null}
+        <Input
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className={icon ? "pl-10 border-pink-200 focus-visible:ring-pink-300 bg-white" : "border-pink-200 focus-visible:ring-pink-300 bg-white"}
+        />
+      </div>
+    </label>
+  );
+}
 
-  const handleSubmit = () => {
-    if (!form.name.trim()) {
-      alert("Nama prosedur harus diisi!");
-      return;
-    }
-    handleSave(form);
+function MoneyInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold text-pink-900">{label}</span>
+      <div className="relative mt-1">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-600">
+          <Wallet className="w-4 h-4" />
+        </span>
+        <span className="absolute left-9 top-1/2 -translate-y-1/2 text-xs font-semibold text-pink-700">
+          Rp
+        </span>
+        <Input
+          inputMode="numeric"
+          value={value}
+          placeholder="0"
+          onChange={(e) => onChange(onlyDigits(e.target.value))}
+          className="pl-16 border-pink-200 focus-visible:ring-pink-300 bg-white"
+        />
+      </div>
+      <p className="mt-1 text-[11px] text-gray-500">Isi angka saja (tanpa titik/koma).</p>
+    </label>
+  );
+}
+
+function NumberInput({
+  label,
+  value,
+  onChange,
+  icon,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  icon?: React.ReactNode;
+  hint?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold text-pink-900">{label}</span>
+      <div className="relative mt-1">
+        {icon ? (
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-600">
+            {icon}
+          </span>
+        ) : null}
+        <Input
+          inputMode="numeric"
+          value={value}
+          placeholder="0"
+          onChange={(e) => onChange(onlyDigits(e.target.value))}
+          className={icon ? "pl-10 border-pink-200 focus-visible:ring-pink-300 bg-white" : "border-pink-200 focus-visible:ring-pink-300 bg-white"}
+        />
+      </div>
+      {hint ? <p className="mt-1 text-[11px] text-gray-500">{hint}</p> : null}
+    </label>
+  );
+}
+
+function PercentInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  // clamp 0-100 optional (kalau mau bebas, hapus clamp)
+  const handle = (raw: string) => {
+    const digits = onlyDigits(raw);
+    if (digits === "") return onChange("");
+    const n = Math.min(100, Math.max(0, Number(digits)));
+    onChange(String(n));
   };
 
   return (
-    <Card className="w-full max-w-3xl mx-auto rounded-xl shadow-lg h-[85vh] overflow-y-auto">
-      <CardContent className="p-6">
-        <h2 className="text-xl font-semibold mb-1 text-gray-800">
-          Tambah Prosedur
-        </h2>
-        <p className="text-gray-500 mb-5 text-sm">
-          Masukkan detail prosedur sesuai kebutuhan.
-        </p>
+    <label className="block">
+      <span className="text-xs font-semibold text-pink-900">{label}</span>
+      <div className="relative mt-1">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-600">
+          <Percent className="w-4 h-4" />
+        </span>
+        <Input
+          inputMode="numeric"
+          value={value}
+          placeholder="0"
+          onChange={(e) => handle(e.target.value)}
+          className="pl-10 pr-10 border-pink-200 focus-visible:ring-pink-300 bg-white"
+        />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-pink-700">
+          %
+        </span>
+      </div>
+      <p className="mt-1 text-[11px] text-gray-500">0–100 (disarankan).</p>
+    </label>
+  );
+}
 
-        {/* Nama Prosedur */}
-        <label className="block mb-4 text-sm">
-          <span className="font-medium text-gray-700">Nama Prosedur *</span>
-          <input
-            className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
-            placeholder="Contoh: Rontgen Cephalometric - Solo"
-            value={form.name}
-            onChange={(e) => update("name", e.target.value)}
-          />
-        </label>
+export default function AddProcedure({ onClose, handleSave }: Props) {
+  const [form, setForm] = useState<ProcedureFormUI>({
+    name: "",
+    code: "",
+    quantity: "",
+    salePrice: "",
+    modalPrice: "",
+    avgComm: "0",
+  });
 
-        {/* Kode */}
-        <label className="block mb-4 text-sm">
-          <span className="font-medium text-gray-700">Kode *</span>
-          <input
-            className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
-            placeholder="Contoh: AE001"
-            value={form.code}
-            onChange={(e) => update("code", e.target.value)}
-          />
-        </label>
+  const update = (k: keyof ProcedureFormUI, v: string) =>
+    setForm((p) => ({ ...p, [k]: v }));
 
-        {/* GRID INPUT */}
-        <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-          <label>
-            <span className="font-medium text-gray-700">Kuantitas</span>
-            <input
-              type="number"
-              min="0"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+  const qty = useMemo(() => toNum(form.quantity), [form.quantity]);
+  const sale = useMemo(() => toNum(form.salePrice), [form.salePrice]);
+  const modal = useMemo(() => toNum(form.modalPrice), [form.modalPrice]);
+  const commPct = useMemo(() => toNum(form.avgComm), [form.avgComm]);
+
+  const totalPenjualan = qty * sale;
+  const totalModal = qty * modal;
+  const totalKomisi = Math.round((totalPenjualan * commPct) / 100);
+  const totalBayar = totalPenjualan - totalKomisi;
+
+  const submit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+
+    const name = form.name.trim();
+    const code = form.code.trim();
+
+    if (!name) return;
+
+    const payload: ProcedureData = {
+      name,
+      code,
+      quantity: qty,
+      salePrice: sale,
+      modalPrice: modal,
+      avgComm: form.avgComm === "" ? "0" : form.avgComm, // tetap string
+    };
+
+    handleSave(payload);
+  };
+
+  return (
+    <form
+      onSubmit={submit}
+      className="w-full max-w-3xl mx-auto rounded-2xl shadow-xl overflow-hidden bg-[#FFF5F7]"
+    >
+      {/* HEADER */}
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full p-1.5 hover:bg-white/20"
+          aria-label="Tutup"
+        >
+          <X className="w-4 h-4 text-white" />
+        </button>
+
+      {/* BODY */}
+      <div className="max-h-[70vh] overflow-y-auto px-6 py-5 space-y-4">
+        <section className="bg-white rounded-xl border border-pink-100 p-4">
+        <div className="mb-3">
+            <span className="text-xs font-semibold text-pink-900">
+              Tipe Data Keuangan
+            </span>
+            <div className="mt-1 px-3 py-2 rounded-lg bg-pink-50 border border-pink-100 text-pink-800 text-sm font-semibold">
+              Komisi Prosedure
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field
+              label="Nama Prosedur *"
+              value={form.name}
+              onChange={(v) => update("name", v)}
+              placeholder="Contoh: Rontgen Cephalometric - Solo"
+              icon={<ClipboardList className="w-4 h-4" />}
+            />
+            <Field
+              label="Kode *"
+              value={form.code}
+              onChange={(v) => update("code", v)}
+              placeholder="Contoh: AE001"
+              icon={<Hash className="w-4 h-4" />}
+            />
+          </div>
+        </section>
+
+        <section className="bg-white rounded-xl border border-pink-100 p-4">
+          <h3 className="text-sm font-bold text-pink-900 mb-3">Input Kuantitas & Harga</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <NumberInput
+              label="Kuantitas"
               value={form.quantity}
-              onChange={(e) => update("quantity", Number(e.target.value))}
+              onChange={(v) => update("quantity", v)}
+              icon={<Boxes className="w-4 h-4" />}
+              hint="Kosong = 0"
             />
-          </label>
 
-          <label>
-            <span className="font-medium text-gray-700">Harga Jual (AVG)</span>
-            <input
-              type="number"
-              min="0"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+            <MoneyInput
+              label="Harga Jual (AVG)"
               value={form.salePrice}
-              onChange={(e) => update("salePrice", Number(e.target.value))}
+              onChange={(v) => update("salePrice", v)}
             />
-          </label>
 
-          <label>
-            <span className="font-medium text-gray-700">Harga Modal (AVG)</span>
-            <input
-              type="number"
-              min="0"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+            <MoneyInput
+              label="Harga Modal (AVG)"
               value={form.modalPrice}
-              onChange={(e) => update("modalPrice", Number(e.target.value))}
+              onChange={(v) => update("modalPrice", v)}
             />
-          </label>
 
-          <label>
-            <span className="font-medium text-gray-700">Komisi (AVG) %</span>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+            <PercentInput
+              label="Komisi (AVG) %"
               value={form.avgComm}
-              onChange={(e) => update("avgComm", e.target.value)} // tetap string
+              onChange={(v) => update("avgComm", v)}
             />
-          </label>
-        </div>
+          </div>
 
-        {/* Info Box */}
-        <div className="p-4 bg-pink-50 border border-pink-200 rounded-lg text-sm mb-5">
-          <p className="font-semibold text-pink-900 mb-2">Preview Perhitungan</p>
-          <p className="text-pink-700">
-            Total Penjualan: <b>Rp {totalPenjualan.toLocaleString("id-ID")}</b>
-          </p>
-          <p className="text-pink-700">
-            Total Modal: <b>Rp {totalModal.toLocaleString("id-ID")}</b>
-          </p>
-          <p className="text-pink-700">
-            Total Komisi: <b>Rp {totalKomisi.toLocaleString("id-ID")}</b>
-          </p>
-          <p className="text-pink-700">
-            Total Bayar: <b>Rp {totalBayar.toLocaleString("id-ID")}</b>
-          </p>
-        </div>
+          {/* Preview */}
+          <div className="mt-4 p-4 bg-pink-50 border border-pink-200 rounded-lg text-sm">
+            <p className="font-semibold text-pink-900 mb-2">Preview Perhitungan</p>
+            <div className="space-y-1 text-pink-700">
+              <p>
+                Total Penjualan: <b>Rp {totalPenjualan.toLocaleString("id-ID")}</b>
+              </p>
+              <p>
+                Total Modal: <b>Rp {totalModal.toLocaleString("id-ID")}</b>
+              </p>
+              <p>
+                Total Komisi: <b>Rp {totalKomisi.toLocaleString("id-ID")}</b>
+              </p>
+              <p>
+                Total Bayar: <b>Rp {totalBayar.toLocaleString("id-ID")}</b>
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
 
-        {/* Buttons */}
-        <div className="flex justify-end gap-3 mt-2">
-          <button
-            className="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-100 text-sm"
-            onClick={onClose}
-          >
-            Batal
-          </button>
+      {/* FOOTER */}
+      <div className="sticky bottom-0 bg-white border-t border-pink-100 px-6 py-4 flex justify-end gap-3">
+        <Button type="button" variant="outline" className="border-pink-200 text-pink-700 hover:bg-pink-50" onClick={onClose}>
+          Batal
+        </Button>
 
-          <button
-            className="px-4 py-2 rounded-lg bg-pink-600 text-white hover:bg-pink-700 text-sm"
-            onClick={handleSubmit}
-          >
-            Simpan
-          </button>
-        </div>
-      </CardContent>
-    </Card>
+        <Button
+          type="submit"
+          className="bg-pink-600 hover:bg-pink-700 text-white"
+          disabled={!form.name.trim()}
+          title={!form.name.trim() ? "Nama prosedur wajib diisi" : ""}
+        >
+          Simpan
+        </Button>
+      </div>
+    </form>
   );
 }

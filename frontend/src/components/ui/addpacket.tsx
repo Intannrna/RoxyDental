@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useMemo, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Package, Hash, Boxes, Wallet, Percent, X } from "lucide-react";
 
 interface PacketData {
   name: string;
   sku: string;
   quantity: number;
   salePrice: number;
-  avgComm: string;
+  avgComm: string; // tetap string (decimal)
 }
 
 interface Props {
@@ -16,140 +18,317 @@ interface Props {
   handleSave: (data: PacketData) => void;
 }
 
-export default function AddPacket({ onClose, handleSave }: Props) {
-  const [form, setForm] = useState<PacketData>({
-    name: "",
-    sku: "",
-    quantity: 1,
-    salePrice: 0,
-    avgComm: "0.00",
-  });
+// UI state supaya input enak (boleh kosong)
+type PacketFormUI = {
+  name: string;
+  sku: string;
+  quantity: string;
+  salePrice: string;
+  avgComm: string; // decimal string
+};
 
-  const update = (key: keyof PacketData, value: string | number) =>
-    setForm({ ...form, [key]: value });
+const onlyDigits = (v: string) => v.replace(/[^\d]/g, "");
+const onlyDecimal = (v: string) => {
+  // izinkan angka + satu titik desimal
+  const cleaned = v.replace(/[^\d.]/g, "");
+  const parts = cleaned.split(".");
+  if (parts.length <= 1) return cleaned;
+  return `${parts[0]}.${parts.slice(1).join("")}`;
+};
 
-  const totalPenjualan = form.quantity * form.salePrice;
-  const totalKomisi = Math.round(
-    (totalPenjualan * parseFloat(form.avgComm || "0")) / 100
+const toInt = (v: string) => (onlyDigits(v) === "" ? 0 : Number(onlyDigits(v)));
+const toMoney = (v: string) => (onlyDigits(v) === "" ? 0 : Number(onlyDigits(v)));
+const toPercent = (v: string) => {
+  const s = onlyDecimal(v);
+  if (s === "" || s === ".") return 0;
+  const n = Number(s);
+  if (Number.isNaN(n)) return 0;
+  // clamp 0..100
+  return Math.min(100, Math.max(0, n));
+};
+
+function TextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  icon,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold text-pink-900">{label}</span>
+      <div className="relative mt-1">
+        {icon ? (
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-600">
+            {icon}
+          </span>
+        ) : null}
+        <Input
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className={icon ? "pl-10 border-pink-200 focus-visible:ring-pink-300 bg-white" : "border-pink-200 focus-visible:ring-pink-300 bg-white"}
+        />
+      </div>
+    </label>
   );
+}
 
-  const handleSubmit = () => {
-    if (!form.name.trim()) {
-      alert("Nama paket harus diisi!");
-      return;
-    }
-    handleSave(form);
+function QtyInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold text-pink-900">{label}</span>
+      <div className="relative mt-1">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-600">
+          <Boxes className="w-4 h-4" />
+        </span>
+        <Input
+          inputMode="numeric"
+          value={value}
+          placeholder="1"
+          onChange={(e) => onChange(onlyDigits(e.target.value))}
+          className="pl-10 border-pink-200 focus-visible:ring-pink-300 bg-white"
+        />
+      </div>
+      <p className="mt-1 text-[11px] text-gray-500">Kosong = 0</p>
+    </label>
+  );
+}
+
+function MoneyInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold text-pink-900">{label}</span>
+      <div className="relative mt-1">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-600">
+          <Wallet className="w-4 h-4" />
+        </span>
+        <span className="absolute left-9 top-1/2 -translate-y-1/2 text-xs font-semibold text-pink-700">
+          Rp
+        </span>
+        <Input
+          inputMode="numeric"
+          value={value}
+          placeholder="0"
+          onChange={(e) => onChange(onlyDigits(e.target.value))}
+          className="pl-16 border-pink-200 focus-visible:ring-pink-300 bg-white"
+        />
+      </div>
+      <p className="mt-1 text-[11px] text-gray-500">Isi angka saja (tanpa titik/koma).</p>
+    </label>
+  );
+}
+
+function PercentInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const handle = (raw: string) => {
+    const cleaned = onlyDecimal(raw);
+    // biarkan user ngetik "" atau "." dulu
+    if (cleaned === "" || cleaned === ".") return onChange(cleaned);
+    const n = Number(cleaned);
+    if (Number.isNaN(n)) return;
+    const clamped = Math.min(100, Math.max(0, n));
+    onChange(clamped.toString());
   };
 
   return (
-    <Card className="w-full max-w-3xl mx-auto rounded-xl shadow-lg p-6 h-[85vh] overflow-y-auto">
-      <CardContent>
-        <h2 className="text-xl font-semibold mb-2 text-gray-800">
-          Tambah Data Keuangan
-        </h2>
-        <p className="text-gray-600 mb-6 text-sm">
-          Tambahkan data keuangan baru ke dalam sistem
-        </p>
+    <label className="block">
+      <span className="text-xs font-semibold text-pink-900">{label}</span>
+      <div className="relative mt-1">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-600">
+          <Percent className="w-4 h-4" />
+        </span>
+        <Input
+          inputMode="decimal"
+          value={value}
+          placeholder="0.00"
+          onChange={(e) => handle(e.target.value)}
+          className="pl-10 pr-10 border-pink-200 focus-visible:ring-pink-300 bg-white"
+        />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-pink-700">
+          %
+        </span>
+      </div>
+      <p className="mt-1 text-[11px] text-gray-500">0–100 (boleh desimal).</p>
+    </label>
+  );
+}
 
-        {/* Tipe Data Keuangan - fiksi */}
-        <label className="block mb-4 text-sm">
-          <span className="font-medium text-gray-700">Tipe Data Keuangan *</span>
-          <input
-            type="text"
-            value="Komisi Paket"
-            disabled
-            className="w-full mt-1 p-2 border rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
-          />
-        </label>
+export default function AddPacket({ onClose, handleSave }: Props) {
+  const [form, setForm] = useState<PacketFormUI>({
+    name: "",
+    sku: "",
+    quantity: "1",
+    salePrice: "",
+    avgComm: "0.00",
+  });
 
-        {/* Nama Paket */}
-        <label className="block mb-4 text-sm">
-          <span className="font-medium text-gray-700">Nama Paket *</span>
-          <input
-            className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
-            placeholder="Contoh: Paket Basic Dental Care"
-            value={form.name}
-            onChange={(e) => update("name", e.target.value)}
-          />
-        </label>
+  const update = (k: keyof PacketFormUI, v: string) =>
+    setForm((p) => ({ ...p, [k]: v }));
 
-        {/* SKU */}
-        <label className="block mb-4 text-sm">
-          <span className="font-medium text-gray-700">SKU *</span>
-          <input
-            className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
-            placeholder="Contoh: PKT001"
-            value={form.sku}
-            onChange={(e) => update("sku", e.target.value)}
-          />
-        </label>
+  const qty = useMemo(() => toInt(form.quantity), [form.quantity]);
+  const sale = useMemo(() => toMoney(form.salePrice), [form.salePrice]);
+  const commPct = useMemo(() => toPercent(form.avgComm), [form.avgComm]);
 
-        {/* GRID INPUT */}
-        <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-          <label>
-            <span className="font-medium text-gray-700">Kuantitas</span>
-            <input
-              type="number"
-              min="0"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+  const totalPenjualan = qty * sale;
+  const totalKomisi = Math.round((totalPenjualan * commPct) / 100);
+
+  const submit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const name = form.name.trim();
+    if (!name) return;
+
+    const payload: PacketData = {
+      name,
+      sku: form.sku.trim(),
+      quantity: qty,
+      salePrice: sale,
+      // pastikan string valid saat kosong / "."
+      avgComm:
+        form.avgComm === "" || form.avgComm === "."
+          ? "0.00"
+          : form.avgComm,
+    };
+
+    handleSave(payload);
+  };
+
+  return (
+    <form
+      onSubmit={submit}
+      className="w-full max-w-3xl mx-auto rounded-2xl shadow-xl overflow-hidden bg-[#FFF5F7]"
+    >
+      {/* HEADER */}
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full p-1.5 hover:bg-white/20"
+          aria-label="Tutup"
+        >
+          <X className="w-4 h-4 text-white" />
+        </button>
+
+      {/* BODY */}
+      <div className="max-h-[70vh] overflow-y-auto px-6 py-5 space-y-4">
+        <section className="bg-white rounded-xl border border-pink-100 p-4">
+          <div className="mb-3">
+            <span className="text-xs font-semibold text-pink-900">
+              Tipe Data Keuangan
+            </span>
+            <div className="mt-1 px-3 py-2 rounded-lg bg-pink-50 border border-pink-100 text-pink-800 text-sm font-semibold">
+              Komisi Paket
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <TextField
+              label="Nama Paket *"
+              value={form.name}
+              onChange={(v) => update("name", v)}
+              placeholder="Contoh: Paket Basic Dental Care"
+              icon={<Package className="w-4 h-4" />}
+            />
+
+            <TextField
+              label="SKU *"
+              value={form.sku}
+              onChange={(v) => update("sku", v)}
+              placeholder="Contoh: PKT001"
+              icon={<Hash className="w-4 h-4" />}
+            />
+          </div>
+        </section>
+
+        <section className="bg-white rounded-xl border border-pink-100 p-4">
+          <h3 className="text-sm font-bold text-pink-900 mb-3">
+            Kuantitas, Harga & Komisi
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <QtyInput
+              label="Kuantitas"
               value={form.quantity}
-              onChange={(e) => update("quantity", Number(e.target.value))}
+              onChange={(v) => update("quantity", v)}
             />
-          </label>
 
-          <label>
-            <span className="font-medium text-gray-700">Harga Jual (AVG)</span>
-            <input
-              type="number"
-              min="0"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+            <MoneyInput
+              label="Harga Jual (AVG)"
               value={form.salePrice}
-              onChange={(e) => update("salePrice", Number(e.target.value))}
+              onChange={(v) => update("salePrice", v)}
             />
-          </label>
 
-          <label className="col-span-2">
-            <span className="font-medium text-gray-700">Komisi (AVG) %</span>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              max="100"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
-              value={form.avgComm}
-              onChange={(e) => update("avgComm", e.target.value)}
-            />
-          </label>
-        </div>
+            <div className="md:col-span-2">
+              <PercentInput
+                label="Komisi (AVG) %"
+                value={form.avgComm}
+                onChange={(v) => update("avgComm", v)}
+              />
+            </div>
+          </div>
 
-        {/* Info Box */}
-        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-sm">
-          <p className="font-semibold text-green-900 mb-2">Preview Perhitungan:</p>
-          <p className="text-green-700">
-            Total Penjualan: Rp {totalPenjualan.toLocaleString("id-ID")}
-          </p>
-          <p className="text-green-700">
-            Total Komisi: Rp {totalKomisi.toLocaleString("id-ID")}
-          </p>
-        </div>
+          {/* Preview */}
+          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-sm">
+            <p className="font-semibold text-green-900 mb-2">Preview Perhitungan</p>
+            <p className="text-green-700">
+              Total Penjualan: <b>Rp {totalPenjualan.toLocaleString("id-ID")}</b>
+            </p>
+            <p className="text-green-700">
+              Total Komisi: <b>Rp {totalKomisi.toLocaleString("id-ID")}</b>
+            </p>
+          </div>
+        </section>
+      </div>
 
-        {/* Buttons */}
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            className="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-100 text-sm"
-            onClick={onClose}
-          >
-            Batal
-          </button>
+      {/* FOOTER */}
+      <div className="sticky bottom-0 bg-white border-t border-pink-100 px-6 py-4 flex justify-end gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          className="border-pink-200 text-pink-700 hover:bg-pink-50"
+          onClick={onClose}
+        >
+          Batal
+        </Button>
 
-          <button
-            className="px-4 py-2 rounded-lg bg-pink-600 text-white hover:bg-pink-700 text-sm"
-            onClick={handleSubmit}
-          >
-            Simpan
-          </button>
-        </div>
-      </CardContent>
-    </Card>
+        <Button
+          type="submit"
+          className="bg-pink-600 hover:bg-pink-700 text-white"
+          disabled={!form.name.trim()}
+          title={!form.name.trim() ? "Nama paket wajib diisi" : ""}
+        >
+          Simpan
+        </Button>
+      </div>
+    </form>
   );
 }

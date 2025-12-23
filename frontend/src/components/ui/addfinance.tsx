@@ -1,8 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useMemo, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Wallet,
+  Percent,
+  TestTube2,
+  Package,
+  Pill,
+  Scissors,
+  ClipboardList,
+  X,
+} from "lucide-react";
 
+/* =======================
+   TYPES
+======================= */
 interface FinanceData {
   tipe: string;
   nama: string;
@@ -23,171 +37,303 @@ interface Props {
   handleSave: (data: FinanceData) => void;
 }
 
+/* =======================
+   FORM UI (STRING)
+======================= */
+type FinanceFormUI = {
+  tipe: string;
+  nama: string;
+  prosedur: string;
+  potongan: string;
+  bhpHarga: string;
+  bhpKomisi: string;
+  farmasiHarga: string;
+  farmasiKomisi: string;
+  paketHarga: string;
+  paketKomisi: string;
+  labHarga: string;
+  labKomisi: string;
+};
+
+const onlyDigits = (v: string) => v.replace(/[^\d]/g, "");
+const toNum = (v: string) => (onlyDigits(v) === "" ? 0 : Number(onlyDigits(v)));
+
+/* =======================
+   INPUT COMPONENTS
+======================= */
+function MoneyInput({
+  label,
+  value,
+  onChange,
+  icon,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold text-pink-900">{label}</span>
+      <div className="relative mt-1">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-600">
+          {icon ?? <Wallet className="w-4 h-4" />}
+        </span>
+        <span className="absolute left-9 top-1/2 -translate-y-1/2 text-xs font-semibold text-pink-700">
+          Rp
+        </span>
+        <Input
+          inputMode="numeric"
+          value={value}
+          placeholder="0"
+          onChange={(e) => onChange(onlyDigits(e.target.value))}
+          className="pl-16 border-pink-200 focus-visible:ring-pink-300 bg-white"
+        />
+      </div>
+      <p className="mt-1 text-[11px] text-gray-500">
+        Isi angka saja (tanpa titik/koma).
+      </p>
+    </label>
+  );
+}
+
+function PercentInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold text-pink-900">{label}</span>
+      <div className="relative mt-1">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-600">
+          <Percent className="w-4 h-4" />
+        </span>
+        <Input
+          inputMode="numeric"
+          value={value}
+          placeholder="0"
+          onChange={(e) => onChange(onlyDigits(e.target.value))}
+          className="pl-10 pr-10 border-pink-200 focus-visible:ring-pink-300 bg-white"
+        />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-pink-700">
+          %
+        </span>
+      </div>
+      <p className="mt-1 text-[11px] text-gray-500">0–100 (disarankan).</p>
+    </label>
+  );
+}
+
+/* =======================
+   MAIN
+======================= */
 export default function AddFinanceData({ onClose, handleSave }: Props) {
-  const [form, setForm] = useState<FinanceData>({
+  const [form, setForm] = useState<FinanceFormUI>({
     tipe: "Komisi Tenaga Medis",
     nama: "",
     prosedur: "",
-    potongan: 0,
-    bhpHarga: 0,
-    bhpKomisi: 0,
-    farmasiHarga: 0,
-    farmasiKomisi: 0,
-    paketHarga: 0,
-    paketKomisi: 0,
-    labHarga: 0,
-    labKomisi: 0,
+    potongan: "",
+    bhpHarga: "",
+    bhpKomisi: "",
+    farmasiHarga: "",
+    farmasiKomisi: "",
+    paketHarga: "",
+    paketKomisi: "",
+    labHarga: "",
+    labKomisi: "",
   });
 
-  const update = (key: keyof FinanceData, value: string | number) =>
-    setForm({ ...form, [key]: value });
+  const update = (k: keyof FinanceFormUI, v: string) =>
+    setForm((p) => ({ ...p, [k]: v }));
+
+  const previewTotal = useMemo(() => {
+    return (
+      toNum(form.potongan) +
+      toNum(form.bhpHarga) +
+      toNum(form.farmasiHarga) +
+      toNum(form.paketHarga) +
+      toNum(form.labHarga)
+    );
+  }, [form]);
+
+  const submit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+
+    const nama = form.nama.trim();
+    if (!nama) return;
+
+    const payload: FinanceData = {
+      tipe: form.tipe,
+      nama,
+      prosedur: form.prosedur.trim(),
+      potongan: toNum(form.potongan),
+      bhpHarga: toNum(form.bhpHarga),
+      bhpKomisi: toNum(form.bhpKomisi),
+      farmasiHarga: toNum(form.farmasiHarga),
+      farmasiKomisi: toNum(form.farmasiKomisi),
+      paketHarga: toNum(form.paketHarga),
+      paketKomisi: toNum(form.paketKomisi),
+      labHarga: toNum(form.labHarga),
+      labKomisi: toNum(form.labKomisi),
+    };
+
+    handleSave(payload);
+  };
 
   return (
-    <Card className="w-full max-w-3xl mx-auto rounded-xl shadow-lg p-6 h-[85vh] overflow-y-auto">
-      <CardContent>
-        <h2 className="text-xl font-semibold mb-2 text-gray-800">Tambah Data Keuangan</h2>
-        <p className="text-gray-600 mb-6 text-sm">Tambahkan data keuangan baru ke dalam sistem</p>
+    <form
+      onSubmit={submit}
+      className="w-full max-w-3xl mx-auto bg-[#FFF5F7] rounded-2xl shadow-xl overflow-hidden"
+    >
+      {/* ================= HEADER ================= */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full p-1.5 hover:bg-white/20"
+          aria-label="Tutup"
+        >
+          <X className="w-4 h-4 text-white" />
+        </button>
 
-        {/* Tipe */}
-        <div className="block mb-4 text-sm">
-          <span className="font-medium text-gray-700">Tipe Data Keuangan *</span>
-          <div className="w-full mt-1 p-2 border rounded-lg bg-gray-100 text-gray-700">
-            {form.tipe}
+
+      {/* ================= BODY ================= */}
+      <div className="max-h-[70vh] overflow-y-auto px-6 py-5 space-y-4">
+        {/* IDENTITAS */}
+        <section className="bg-white rounded-xl border border-pink-100 p-4">
+
+          <div className="mb-3">
+            <span className="text-xs font-semibold text-pink-900">
+              Tipe Data Keuangan
+            </span>
+            <div className="mt-1 px-3 py-2 rounded-lg bg-pink-50 border border-pink-100 text-pink-800 text-sm font-semibold">
+              {form.tipe}
+            </div>
           </div>
-        </div>
 
-        {/* Nama Tenaga Medis */}
-        <label className="block mb-4 text-sm">
-          <span className="font-medium text-gray-700">Nama Tenaga Medis *</span>
-          <input
-            className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
-            placeholder="Contoh: drg. Azril"
-            value={form.nama}
-            onChange={(e) => update("nama", e.target.value)}
-          />
-        </label>
+          <label className="block mb-3">
+            <span className="text-xs font-semibold text-pink-900">
+              Nama Tenaga Medis *
+            </span>
+            <Input
+              value={form.nama}
+              onChange={(e) => update("nama", e.target.value)}
+              placeholder="Contoh: drg. Azril"
+              className="mt-1 border-pink-200 focus-visible:ring-pink-300 bg-white"
+            />
+          </label>
 
-        {/* Prosedur */}
-        <label className="block mb-4 text-sm">
-          <span className="font-medium text-gray-700">Prosedur</span>
-          <input
-            className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
-            placeholder="Contoh: Scaling Gigi"
-            value={form.prosedur}
-            onChange={(e) => update("prosedur", e.target.value)}
-          />
-        </label>
+          <label className="block">
+            <span className="text-xs font-semibold text-pink-900">Prosedur</span>
+            <Input
+              value={form.prosedur}
+              onChange={(e) => update("prosedur", e.target.value)}
+              placeholder="Contoh: Scaling Gigi"
+              className="mt-1 border-pink-200 focus-visible:ring-pink-300 bg-white"
+            />
+          </label>
+        </section>
 
-        {/* GRID INPUT */}
-        <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-          <label>
-            <span className="font-medium">Potongan Awal</span>
-            <input
-              type="number"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+        {/* BIAYA & KOMISI */}
+        <section className="bg-white rounded-xl border border-pink-100 p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-bold text-pink-900">
+              Komponen Biaya & Komisi
+            </h3>
+            <span className="text-xs text-gray-600">
+              Total:{" "}
+              <span className="font-bold text-pink-700">
+                Rp {previewTotal.toLocaleString("id-ID")}
+              </span>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <MoneyInput
+              label="Potongan Awal"
               value={form.potongan}
-              onChange={(e) => update("potongan", Number(e.target.value))}
+              onChange={(v) => update("potongan", v)}
+              icon={<Scissors className="w-4 h-4" />}
             />
-          </label>
 
-          <label>
-            <span className="font-medium">Harga Modal (BHP)</span>
-            <input
-              type="number"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+            <MoneyInput
+              label="Harga Modal (BHP)"
               value={form.bhpHarga}
-              onChange={(e) => update("bhpHarga", Number(e.target.value))}
+              onChange={(v) => update("bhpHarga", v)}
             />
-          </label>
 
-          <label>
-            <span className="font-medium">Komisi (BHP) %</span>
-            <input
-              type="number"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+            <PercentInput
+              label="Komisi (BHP)"
               value={form.bhpKomisi}
-              onChange={(e) => update("bhpKomisi", Number(e.target.value))}
+              onChange={(v) => update("bhpKomisi", v)}
             />
-          </label>
 
-          <label>
-            <span className="font-medium">Harga Modal (Farmasi)</span>
-            <input
-              type="number"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+            <MoneyInput
+              label="Harga Modal (Farmasi)"
               value={form.farmasiHarga}
-              onChange={(e) => update("farmasiHarga", Number(e.target.value))}
+              onChange={(v) => update("farmasiHarga", v)}
+              icon={<Pill className="w-4 h-4" />}
             />
-          </label>
 
-          <label>
-            <span className="font-medium">Komisi (Farmasi) %</span>
-            <input
-              type="number"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+            <PercentInput
+              label="Komisi (Farmasi)"
               value={form.farmasiKomisi}
-              onChange={(e) => update("farmasiKomisi", Number(e.target.value))}
+              onChange={(v) => update("farmasiKomisi", v)}
             />
-          </label>
 
-          <label>
-            <span className="font-medium">Paket</span>
-            <input
-              type="number"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+            <MoneyInput
+              label="Paket"
               value={form.paketHarga}
-              onChange={(e) => update("paketHarga", Number(e.target.value))}
+              onChange={(v) => update("paketHarga", v)}
+              icon={<Package className="w-4 h-4" />}
             />
-          </label>
 
-          <label>
-            <span className="font-medium">Komisi (Paket) %</span>
-            <input
-              type="number"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+            <PercentInput
+              label="Komisi (Paket)"
               value={form.paketKomisi}
-              onChange={(e) => update("paketKomisi", Number(e.target.value))}
+              onChange={(v) => update("paketKomisi", v)}
             />
-          </label>
 
-          <label>
-            <span className="font-medium">LAB</span>
-            <input
-              type="number"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+            <MoneyInput
+              label="LAB"
               value={form.labHarga}
-              onChange={(e) => update("labHarga", Number(e.target.value))}
+              onChange={(v) => update("labHarga", v)}
+              icon={<TestTube2 className="w-4 h-4" />}
             />
-          </label>
 
-          <label>
-            <span className="font-medium">Komisi (LAB) %</span>
-            <input
-              type="number"
-              className="w-full mt-1 p-2 border rounded-lg bg-gray-50"
+            <PercentInput
+              label="Komisi (LAB)"
               value={form.labKomisi}
-              onChange={(e) => update("labKomisi", Number(e.target.value))}
+              onChange={(v) => update("labKomisi", v)}
             />
-          </label>
-        </div>
+          </div>
+        </section>
+      </div>
 
-        {/* BUTTONS */}
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            className="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-100 text-sm"
-            onClick={onClose}
-          >
-            Batal
-          </button>
+      {/* ================= FOOTER ================= */}
+      <div className="sticky bottom-0 bg-white border-t border-pink-100 px-6 py-4 flex justify-end gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          className="border-pink-200 text-pink-700 hover:bg-pink-50"
+          onClick={onClose}
+        >
+          Batal
+        </Button>
 
-          <button
-            className="px-4 py-2 rounded-lg bg-pink-600 text-white hover:bg-pink-700 text-sm"
-            onClick={() => handleSave(form)}
-          >
-            Simpan
-          </button>
-        </div>
-      </CardContent>
-    </Card>
+        <Button
+          type="submit"
+          className="bg-pink-600 hover:bg-pink-700 text-white"
+          disabled={!form.nama.trim()}
+          title={!form.nama.trim() ? "Nama tenaga medis wajib diisi" : ""}
+        >
+          Simpan
+        </Button>
+      </div>
+    </form>
   );
 }

@@ -174,7 +174,7 @@ export default function PaymentPage() {
         <Card className="rounded-2xl border-pink-100 shadow-sm mb-5">
           <CardContent className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             {/* SEARCH */}
-            <div className="relative w-full md:max-w-md">
+            <div className="relative w-full md:max-w-md mt-5">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-pink-400" />
               <Input
                 placeholder="Cari nama pasien / nomor kunjungan"
