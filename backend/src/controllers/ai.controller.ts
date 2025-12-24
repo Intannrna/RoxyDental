@@ -21,7 +21,7 @@ export const getPrediction = async (req: Request, res: Response, next: NextFunct
     const isHealthy = await checkAIServiceHealth();
     
     if (!isHealthy) {
-      console.error('❌ AI Service is not available at:', AI_SERVICE_URL);
+      console.error('AI Service is not available at:', AI_SERVICE_URL);
       return res.status(503).json({
         status: 'error',
         message: 'Layanan prediksi sedang tidak tersedia. Pastikan AI Service berjalan di ' + AI_SERVICE_URL,
@@ -38,7 +38,7 @@ export const getPrediction = async (req: Request, res: Response, next: NextFunct
     
     return res.status(200).json(response.data);
   } catch (error) {
-    console.error('❌ Prediction Error:', error);
+    console.error('Prediction Error:', error);
     
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError;
@@ -93,7 +93,7 @@ export const chatTika = async (req: Request, res: Response, next: NextFunction) 
     const isHealthy = await checkAIServiceHealth();
     
     if (!isHealthy) {
-      console.error('❌ AI Service is not available at:', AI_SERVICE_URL);
+      console.error('AI Service is not available at:', AI_SERVICE_URL);
       return res.status(503).json({
         status: 'error',
         reply: 'Maaf, Tika sedang offline. Pastikan AI Service berjalan di ' + AI_SERVICE_URL
@@ -113,7 +113,7 @@ export const chatTika = async (req: Request, res: Response, next: NextFunction) 
     
     return res.status(200).json(response.data);
   } catch (error) {
-    console.error('❌ Chat Error:', error);
+    console.error('Chat Error:', error);
     
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError;
