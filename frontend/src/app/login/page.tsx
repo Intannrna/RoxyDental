@@ -4,11 +4,12 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { HiEye, HiEyeOff } from "react-icons/hi";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { authService } from "@/services/auth.service";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { toast } = useToast();
 
   const [role, setRole] = useState<"DOKTER" | "PERAWAT">();
   const [username, setUsername] = useState("");
@@ -17,9 +18,6 @@ export default function LoginPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // tambahan: modal sukses agar page tidak langsung redirect
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const slides = ["/images/logo1.jpg", "/images/logo2.jpg", "/images/logo3.jpg"];
 
@@ -30,24 +28,8 @@ export default function LoginPage() {
     return () => clearInterval(timer);
   }, [slides.length]);
 
-  // redirect dikontrol SENDIRI setelah modal tampil (sama seperti RegisterPage)
-  useEffect(() => {
-    if (!showSuccessModal || !role) return;
-
-    const t = setTimeout(() => {
-      if (role === "DOKTER") {
-        router.push("/dashboard/dokter/main");
-      } else {
-        router.push("/dashboard/perawat/mainpr");
-      }
-    }, 2000); // delay 2 detik
-
-    return () => clearTimeout(t);
-  }, [showSuccessModal, role, router]);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
     if (!role) {
       setError("Pilih role terlebih dahulu");
@@ -64,13 +46,24 @@ export default function LoginPage() {
     try {
       const response = await authService.login({ username, password, role });
 
-      // jangan langsung router.push di sini — tampilkan modal dulu
-      if (response?.success) {
-        setShowSuccessModal(true);
-      } else {
-        setError(response?.message || "Login gagal. Silakan coba lagi.");
+      // backend returns 200 tetapi success=false
+      if (!response?.success) {
+        throw {
+          response: {
+            status: 401,
+            data: { message: response?.message || "Username atau password salah" },
+          },
+        };
       }
+
+      // --- SUCCESS: show toast (singkat) lalu redirect segera ---
+      toast({ title: "Login berhasil", description: "Mengalihkan ke dashboard..." });
+
+      if (role === "DOKTER") router.push("/dashboard/dokter/main");
+      else router.push("/dashboard/perawat/mainpr");
+
     } catch (err: any) {
+      // jangan hapus input di sini — biarkan user tetap melihat apa yg diketik
       if (err?.response) {
         if (err.response.status === 401 || err.response.status === 400) {
           setError("Username atau password salah");
@@ -80,6 +73,10 @@ export default function LoginPage() {
       } else {
         setError("Server tidak dapat dihubungi");
       }
+
+      // Additionally, surface a short toast for network/server errors (optional)
+      // toast({ title: 'Login gagal', description: error || 'Cek kembali koneksi atau coba lagi.' });
+
     } finally {
       setLoading(false);
     }
@@ -88,78 +85,44 @@ export default function LoginPage() {
   return (
     <>
       <div className="min-h-screen w-full flex flex-col lg:flex-row">
-        <div
-          className="hidden lg:flex relative flex-col justify-center items-center lg:w-3/5 overflow-hidden"
-          style={{ background: "linear-gradient(135deg, #FFDDE6 0%, #FFCAD4 40%, #FFB4C8 100%)" }}
-        >
+        {/* LEFT SLIDE PART - unchanged visually */}
+        <div className="hidden lg:flex relative flex-col justify-center items-center lg:w-3/5 overflow-hidden" style={{ background: "linear-gradient(135deg, #FFDDE6 0%, #FFCAD4 40%, #FFB4C8 100%)" }}>
           <div className="absolute top-10 right-10 w-32 h-32 bg-white/20 rounded-full blur-3xl"></div>
           <div className="absolute bottom-20 left-10 w-40 h-40 bg-pink-300/30 rounded-full blur-3xl"></div>
 
           <div className="relative z-10 w-[85%] max-w-3xl">
             <div className="text-left w-full mb-8">
               <h1 className="text-5xl xl:text-6xl font-bold text-gray-900 leading-tight mb-2">Selamat Datang</h1>
-              <h2 className="text-5xl xl:text-6xl font-bold text-gray-900 leading-tight mb-2">
-                di <span className="text-pink-600 drop-shadow-sm">POLABDC</span>
-              </h2>
+              <h2 className="text-5xl xl:text-6xl font-bold text-gray-900 leading-tight mb-2">di <span className="text-pink-600 drop-shadow-sm">POLABDC</span></h2>
             </div>
 
             <div className="relative rounded-3xl shadow-2xl bg-white/40 backdrop-blur-sm p-4">
-              <div
-                className="relative overflow-hidden w-full rounded-2xl bg-gray-100"
-                style={{ paddingBottom: "56.25%" }}
-              >
+              <div className="relative overflow-hidden w-full rounded-2xl bg-gray-100" style={{ paddingBottom: "56.25%" }}>
                 {slides.map((src, index) => (
-                  // menggunakan img biasa untuk compatibilitas layout yang kamu pakai
-                  <img
-                    key={index}
-                    src={src}
-                    alt={`Clinic slide ${index + 1}`}
-                    className={`absolute inset-0 w-full h-full object-cover transition-all duration-1000 ${
-                      currentSlide === index ? "opacity-100 scale-100" : "opacity-0 scale-105"
-                    }`}
-                  />
+                  <img key={index} src={src} alt={`Clinic slide ${index + 1}`} className={`absolute inset-0 w-full h-full object-cover transition-all duration-1000 ${currentSlide === index ? "opacity-100 scale-100" : "opacity-0 scale-105"}`} />
                 ))}
-
                 <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent"></div>
               </div>
 
               <div className="flex justify-center mt-5 gap-3">
                 {slides.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentSlide(index)}
-                    className="transition-all duration-300 rounded-full hover:scale-110"
-                    style={{
-                      width: currentSlide === index ? "28px" : "10px",
-                      height: "10px",
-                      backgroundColor: currentSlide === index ? "#FF5E8A" : "#FFB4C8",
-                    }}
-                    aria-label={`Go to slide ${index + 1}`}
-                  />
+                  <button key={index} onClick={() => setCurrentSlide(index)} className="transition-all duration-300 rounded-full hover:scale-110" style={{ width: currentSlide === index ? "28px" : "10px", height: "10px", backgroundColor: currentSlide === index ? "#FF5E8A" : "#FFB4C8" }} aria-label={`Go to slide ${index + 1}`} />
                 ))}
               </div>
             </div>
           </div>
         </div>
 
+        {/* RIGHT LOGIN PART */}
         <div className="flex flex-col w-full lg:w-2/5 bg-white min-h-screen">
           <div className="flex flex-col justify-center items-center flex-1 px-6 sm:px-8 md:px-12 py-8 sm:py-10">
             <div className="w-full max-w-md">
               <div className="flex flex-col items-center mb-8 animate-in fade-in zoom-in duration-300">
-                {/* LOGO */}
-                <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center 
-                      bg-linear-to-br from-pink-400 to-pink-600
-                      shadow-[0_12px_30px_rgba(255,94,138,0.4)]
-                      mb-4 transition-transform hover:scale-105"
-                >
+                <div className="w-20 h-20 rounded-full flex items-center justify-center bg-linear-to-br from-pink-400 to-pink-600 shadow-[0_12px_30px_rgba(255,94,138,0.4)] mb-4 transition-transform hover:scale-105">
                   <Image src="/images/putih.png" alt="Logo POLABDC" width={56} height={56} className="object-contain" priority />
                 </div>
 
-                {/* TITLE */}
                 <h2 className="text-3xl font-bold text-pink-500 tracking-wide text-center">POLABDC</h2>
-
-                {/* SUBTITLE */}
                 <p className="text-gray-500 font-medium text-sm mt-1 text-center">Login ke Akun Kamu</p>
               </div>
 
@@ -171,20 +134,8 @@ export default function LoginPage() {
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-gray-700 mb-3">Pilih Role</label>
                   <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { value: "DOKTER", label: "Dokter" },
-                      { value: "PERAWAT", label: "Perawat" },
-                    ].map((r) => (
-                      <button
-                        key={r.value}
-                        type="button"
-                        className={`px-4 py-3 rounded-xl font-semibold transition-all border-2 text-sm sm:text-base ${
-                          role === r.value
-                            ? "text-white bg-pink-500 border-pink-500 shadow-lg scale-105"
-                            : "text-gray-700 bg-white border-gray-300 hover:border-pink-300 hover:bg-pink-50"
-                        }`}
-                        onClick={() => setRole(r.value as any)}
-                      >
+                    {[{ value: "DOKTER", label: "Dokter" }, { value: "PERAWAT", label: "Perawat" }].map((r) => (
+                      <button key={r.value} type="button" className={`px-4 py-3 rounded-xl font-semibold transition-all border-2 text-sm sm:text-base ${role === r.value ? "text-white bg-pink-500 border-pink-500 shadow-lg scale-105" : "text-gray-700 bg-white border-gray-300 hover:border-pink-300 hover:bg-pink-50"}`} onClick={() => { setRole(r.value as any); if (error) setError(""); }}>
                         {r.label}
                       </button>
                     ))}
@@ -195,11 +146,15 @@ export default function LoginPage() {
                   <div>
                     <label className="block font-semibold text-sm text-gray-900 mb-2">Username</label>
                     <input
+                      autoComplete="username"
                       type="text"
                       className="w-full border-2 rounded-xl px-4 py-3 text-sm sm:text-base text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:ring-4 focus:ring-pink-100 outline-none transition-all"
                       placeholder="Masukkan username"
                       value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      onChange={(e) => {
+                        setUsername(e.target.value);
+                        if (error) setError("");
+                      }}
                       disabled={loading}
                     />
                   </div>
@@ -208,28 +163,24 @@ export default function LoginPage() {
                     <label className="block font-semibold text-sm text-gray-900 mb-2">Password</label>
                     <div className="relative">
                       <input
+                        autoComplete="current-password"
                         type={showPassword ? "text" : "password"}
                         className="w-full border-2 rounded-xl px-4 py-3 pr-12 text-sm sm:text-base text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:ring-4 focus:ring-pink-100 outline-none transition-all"
                         placeholder="Masukkan password"
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          if (error) setError("");
+                        }}
                         disabled={loading}
                       />
-                      <button
-                        type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-pink-600 transition-colors"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
+                      <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-pink-600 transition-colors" onClick={() => setShowPassword(!showPassword)}>
                         {showPassword ? <HiEyeOff size={22} /> : <HiEye size={22} />}
                       </button>
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-linear-to-r from-pink-500 to-pink-600 text-white py-3.5 rounded-xl font-bold text-base sm:text-lg shadow-lg hover:shadow-xl hover:from-pink-600 hover:to-pink-700 transform hover:scale-[1.02] transition-all active:scale-[0.98] mt-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                  >
+                  <button type="submit" disabled={loading} className="w-full bg-linear-to-r from-pink-500 to-pink-600 text-white py-3.5 rounded-xl font-bold text-base sm:text-lg shadow-lg hover:shadow-xl hover:from-pink-600 hover:to-pink-700 transform hover:scale-[1.02] transition-all active:scale-[0.98] mt-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">
                         <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
@@ -246,21 +197,11 @@ export default function LoginPage() {
               </form>
 
               <div className="mt-6 space-y-3 text-center">
-                <p
-                  className="text-pink-600 font-bold underline cursor-pointer text-sm sm:text-base hover:text-pink-700"
-                  onClick={() => router.push("/forgot-password")}
-                >
-                  Lupa Password?
-                </p>
+                <p className="text-pink-600 font-bold underline cursor-pointer text-sm sm:text-base hover:text-pink-700" onClick={() => router.push("/forgot-password")}>Lupa Password?</p>
 
                 <div className="h-6">
                   {role === "PERAWAT" && (
-                    <p className="text-gray-600 text-sm sm:text-base">
-                      Belum punya akun?{" "}
-                      <span className="text-pink-600 font-bold underline cursor-pointer hover:text-pink-700" onClick={() => router.push("/register")}>
-                        Daftar Sekarang
-                      </span>
-                    </p>
+                    <p className="text-gray-600 text-sm sm:text-base">Belum punya akun? <span className="text-pink-600 font-bold underline cursor-pointer hover:text-pink-700" onClick={() => router.push("/register")}>Daftar Sekarang</span></p>
                   )}
                 </div>
 
@@ -277,31 +218,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-
-      {/* Modal sukses (sama behavior seperti RegisterPage) */}
-      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent className="max-w-md rounded-2xl">
-          <DialogHeader className="space-y-3">
-            <DialogTitle className="text-xl font-bold text-gray-900 text-center">Login Berhasil</DialogTitle>
-          </DialogHeader>
-
-          <div className="text-center space-y-4">
-            <p className="text-gray-600 text-sm leading-relaxed">Selamat datang kembali — Anda akan diarahkan ke dashboard.</p>
-
-            <button
-              onClick={() => {
-                if (role === "DOKTER") router.push("/dashboard/dokter/main");
-                else router.push("/dashboard/perawat/mainpr");
-              }}
-              className="w-full mt-4 bg-pink-600 hover:bg-pink-700 text-white py-3 rounded-xl font-semibold transition-colors"
-            >
-              Masuk Sekarang
-            </button>
-
-            <p className="text-xs text-gray-400">Anda akan diarahkan otomatis dalam beberapa detik</p>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

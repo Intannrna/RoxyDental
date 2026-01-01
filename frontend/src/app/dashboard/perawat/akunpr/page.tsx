@@ -196,7 +196,7 @@ function MedicalStaffDashboardContent() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InfoItem label="ID Karyawan" value={profile.username} icon="id" />
+                <InfoItem label="Username" value={profile.username} icon="id" />
                 <InfoItem label="No. SIP" value={profile.sipNumber || '-'} icon="file" />
                 <InfoItem label="No. STR" value={profile.sipNumber || '-'} icon="badge" />
                 <InfoItem label="Email" value={profile.email} icon="mail" />
@@ -279,7 +279,7 @@ function MedicalStaffDashboardContent() {
 
         <footer className="mt-10">
           <p className="text-center text-sm text-gray-400">
-            © 2025 RoxyDental - Platform Klinik Gigi Modern
+            © 2025 POLABDC - Platform Klinik Gigi 
           </p>
         </footer>
       </main>

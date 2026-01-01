@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, Hash, Boxes, Wallet, Percent, X } from "lucide-react";
+import { ClipboardList, Hash, Boxes, Wallet, Percent } from "lucide-react";
 
 interface ProcedureData {
   name: string;
@@ -11,7 +11,7 @@ interface ProcedureData {
   quantity: number;
   salePrice: number;
   modalPrice: number;
-  avgComm: string; // tetap string (sesuai kebutuhan kamu)
+  avgComm: string;
 }
 
 interface Props {
@@ -19,14 +19,13 @@ interface Props {
   handleSave: (data: ProcedureData) => void;
 }
 
-// UI state khusus input agar enak (boleh kosong)
 type ProcedureFormUI = {
   name: string;
   code: string;
   quantity: string;
   salePrice: string;
   modalPrice: string;
-  avgComm: string; // string %
+  avgComm: string;
 };
 
 const onlyDigits = (v: string) => v.replace(/[^\d]/g, "");
@@ -58,7 +57,11 @@ function Field({
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className={icon ? "pl-10 border-pink-200 focus-visible:ring-pink-300 bg-white" : "border-pink-200 focus-visible:ring-pink-300 bg-white"}
+          className={
+            icon
+              ? "pl-10 border-pink-200 focus-visible:ring-pink-300 bg-white"
+              : "border-pink-200 focus-visible:ring-pink-300 bg-white"
+          }
         />
       </div>
     </label>
@@ -124,7 +127,11 @@ function NumberInput({
           value={value}
           placeholder="0"
           onChange={(e) => onChange(onlyDigits(e.target.value))}
-          className={icon ? "pl-10 border-pink-200 focus-visible:ring-pink-300 bg-white" : "border-pink-200 focus-visible:ring-pink-300 bg-white"}
+          className={
+            icon
+              ? "pl-10 border-pink-200 focus-visible:ring-pink-300 bg-white"
+              : "border-pink-200 focus-visible:ring-pink-300 bg-white"
+          }
         />
       </div>
       {hint ? <p className="mt-1 text-[11px] text-gray-500">{hint}</p> : null}
@@ -141,7 +148,6 @@ function PercentInput({
   value: string;
   onChange: (v: string) => void;
 }) {
-  // clamp 0-100 optional (kalau mau bebas, hapus clamp)
   const handle = (raw: string) => {
     const digits = onlyDigits(raw);
     if (digits === "") return onChange("");
@@ -209,7 +215,7 @@ export default function AddProcedure({ onClose, handleSave }: Props) {
       quantity: qty,
       salePrice: sale,
       modalPrice: modal,
-      avgComm: form.avgComm === "" ? "0" : form.avgComm, // tetap string
+      avgComm: form.avgComm === "" ? "0" : form.avgComm,
     };
 
     handleSave(payload);
@@ -218,31 +224,28 @@ export default function AddProcedure({ onClose, handleSave }: Props) {
   return (
     <form
       onSubmit={submit}
-      className="w-full max-w-3xl mx-auto rounded-2xl shadow-xl overflow-hidden bg-[#FFF5F7]"
+      className="w-full max-w-3xl mx-auto rounded-2xl shadow-xl overflow-hidden bg-white"
     >
-      {/* HEADER */}
+      {/* ✅ HEADER (FIX BIAR ATAS TIDAK KOSONG) */}
+      <div className="sticky top-0 z-20 bg-white border-b border-pink-100 px-6 py-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Tambah Prosedur</h2>
+            <p className="text-sm text-gray-600">
+              Isi data prosedur, kuantitas, harga, dan komisi rata-rata.
+            </p>
+          </div>
+        </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-full p-1.5 hover:bg-white/20"
-          aria-label="Tutup"
-        >
-          <X className="w-4 h-4 text-white" />
-        </button>
+        <div className="mt-3 text-xs">
+          <span className="text-gray-500">Tipe Data Keuangan:</span>{" "}
+          <span className="font-semibold text-pink-700">Komisi Procedure</span>
+        </div>
+      </div>
 
       {/* BODY */}
-      <div className="max-h-[70vh] overflow-y-auto px-6 py-5 space-y-4">
+      <div className="max-h-[70vh] overflow-y-auto px-6 py-5 space-y-4 bg-[#FFF5F7]">
         <section className="bg-white rounded-xl border border-pink-100 p-4">
-        <div className="mb-3">
-            <span className="text-xs font-semibold text-pink-900">
-              Tipe Data Keuangan
-            </span>
-            <div className="mt-1 px-3 py-2 rounded-lg bg-pink-50 border border-pink-100 text-pink-800 text-sm font-semibold">
-              Komisi Prosedure
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field
               label="Nama Prosedur *"
@@ -315,7 +318,12 @@ export default function AddProcedure({ onClose, handleSave }: Props) {
 
       {/* FOOTER */}
       <div className="sticky bottom-0 bg-white border-t border-pink-100 px-6 py-4 flex justify-end gap-3">
-        <Button type="button" variant="outline" className="border-pink-200 text-pink-700 hover:bg-pink-50" onClick={onClose}>
+        <Button
+          type="button"
+          variant="outline"
+          className="border-pink-200 text-pink-700 hover:bg-pink-50"
+          onClick={onClose}
+        >
           Batal
         </Button>
 

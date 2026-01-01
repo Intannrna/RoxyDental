@@ -31,7 +31,7 @@ export default function SettingsAccountInfo() {
     profilePhoto: ""
   });
 
-  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+  const [previewPhoto, setPreviewPhoto] = useState<string>("");
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
   const [successSaveOpen, setSuccessSaveOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -61,7 +61,7 @@ export default function SettingsAccountInfo() {
           sipEndDate: data.sipEndDate ? data.sipEndDate.split('T')[0] : "",
           profilePhoto: data.profilePhoto || ""
         });
-        setPreviewPhoto(data.profilePhoto || null);
+        setPreviewPhoto(data.profilePhoto || "");
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -72,12 +72,12 @@ export default function SettingsAccountInfo() {
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.size <= 2 * 1024 * 1024) {
+    if (file && file.size <= 5 * 1024 * 1024) {
       const reader = new FileReader();
       reader.onload = () => setPreviewPhoto(reader.result as string);
       reader.readAsDataURL(file);
     } else {
-      alert("File terlalu besar! Maksimal 2MB.");
+      alert("File terlalu besar! Maksimal 5MB.");
     }
   };
 
@@ -94,9 +94,9 @@ export default function SettingsAccountInfo() {
         experience: profileData.experience,
         sipStartDate: profileData.sipStartDate,
         sipEndDate: profileData.sipEndDate,
-        profilePhoto: previewPhoto || profileData.profilePhoto
+        profilePhoto: previewPhoto
       };
-      
+
       const response = await userService.updateProfile(updateData);
       if (response.success) {
         setConfirmSaveOpen(false);
@@ -117,12 +117,12 @@ export default function SettingsAccountInfo() {
     try {
       setDeleting(true);
       setConfirmDeleteOpen(false);
-      
+
       const response = await userService.deleteAccount();
-      
+
       if (response.success) {
         setSuccessDeleteOpen(true);
-        
+
         setTimeout(() => {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
@@ -155,7 +155,7 @@ export default function SettingsAccountInfo() {
     <div className="min-h-screen bg-[#FFF5F7]">
       <DoctorNavbar />
       <div className="pt-6 px-4 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
           <SettingsSidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} />
 
           <div className="lg:col-span-3">
@@ -181,7 +181,7 @@ export default function SettingsAccountInfo() {
 
                   <div className="flex-1">
                     <h3 className="text-xl font-bold text-pink-900 mb-1">Foto Profil</h3>
-                    <p className="text-sm text-pink-600 mb-2">Format: JPG, PNG. Maksimal 2MB</p>
+                    <p className="text-sm text-pink-600 mb-2">Format: JPG, PNG. Maksimal 5MB</p>
                     <div className="flex gap-2">
                       <label className="flex items-center gap-1 bg-pink-600 hover:bg-pink-700 text-white px-3 py-1 rounded-md cursor-pointer">
                         <Upload className="w-4 h-4" /> Ubah Foto
@@ -191,7 +191,7 @@ export default function SettingsAccountInfo() {
                         size="sm"
                         variant="outline"
                         className="border-pink-300 text-pink-700"
-                        onClick={() => setPreviewPhoto(null)}
+                        onClick={() => setPreviewPhoto("")}
                       >
                         Hapus Foto
                       </Button>
@@ -329,7 +329,7 @@ export default function SettingsAccountInfo() {
         </div>
 
         <p className="text-center text-sm text-pink-600 mt-8">
-          © 2025 RosyDental. Platform untuk klinik gigi modern
+          © 2025 POLABDC. Platform untuk klinik Gigi
         </p>
       </div>
 
@@ -380,9 +380,9 @@ export default function SettingsAccountInfo() {
             </p>
           </div>
           <div className="flex gap-3 justify-center pt-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setConfirmDeleteOpen(false)} 
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDeleteOpen(false)}
               className="px-8 border-gray-300 text-gray-700"
               disabled={deleting}
             >
@@ -399,7 +399,7 @@ export default function SettingsAccountInfo() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={successDeleteOpen} onOpenChange={() => {}}>
+      <Dialog open={successDeleteOpen} onOpenChange={() => { }}>
         <DialogContent className="max-w-md text-center p-6">
           <div className="mb-4">
             <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">

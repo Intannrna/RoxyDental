@@ -1,4 +1,9 @@
-import { Link, useLocation } from "wouter";
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 import {
   LayoutDashboard,
   Users,
@@ -9,8 +14,8 @@ import {
   UserCircle,
   Settings,
   LogOut,
-  Bell
 } from "lucide-react";
+
 import {
   Sidebar,
   SidebarContent,
@@ -23,11 +28,14 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { auth } from "@/lib/auth";
+
+// ✅ sesuaikan lokasi auth kamu (lihat catatan di bawah)
+import { auth } from "@/libs/auth";
+
 import { useQuery } from "@tanstack/react-query";
-import type { User } from "@shared/schema";
 
 const doctorMenuItems = [
   { title: "Dashboard", icon: LayoutDashboard, path: "/doctor/dashboard" },
@@ -35,23 +43,31 @@ const doctorMenuItems = [
   { title: "Rekam Medis", icon: FileText, path: "/doctor/medical-records" },
   { title: "Jadwal Praktik", icon: Calendar, path: "/doctor/calendar" },
   { title: "Laporan", icon: DollarSign, path: "/doctor/reports" },
-];
+] as const;
 
 const nurseMenuItems = [
   { title: "Dashboard", icon: LayoutDashboard, path: "/nurse/dashboard" },
   { title: "Antrian Pasien", icon: ClipboardList, path: "/nurse/queue" },
   { title: "Daftar Pasien", icon: Users, path: "/nurse/patients" },
   { title: "Rekam Medis", icon: FileText, path: "/nurse/medical-records" },
-];
+] as const;
 
 export function AppSidebar() {
-  const [location] = useLocation();
+  const pathname = usePathname();
   const user = auth.getUser();
   const menuItems = user?.role === "dokter" ? doctorMenuItems : nurseMenuItems;
 
   const { data: notifications } = useQuery<number>({
-    queryKey: ['/api/notifications/unread/count'],
+    queryKey: ["/api/notifications/unread/count"],
+    queryFn: async () => {
+      const res = await fetch("/api/notifications/unread/count", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch notifications count");
+      const data = await res.json();
+      // dukung beberapa bentuk response
+      return typeof data === "number" ? data : (data?.count ?? 0);
+    },
     enabled: !!user,
+    staleTime: 30_000,
   });
 
   const handleLogout = () => {
@@ -59,12 +75,14 @@ export function AppSidebar() {
     window.location.href = "/";
   };
 
-  const userInitials = user?.fullName
-    .split(" ")
-    .map(n => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2) || "U";
+  const userInitials =
+    user?.fullName
+      ?.split(" ")
+      .filter(Boolean)
+      .map((n: string) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "U";
 
   return (
     <Sidebar className="border-r border-sidebar-border">
@@ -74,7 +92,7 @@ export function AppSidebar() {
             <span className="text-primary-foreground font-bold text-lg">P</span>
           </div>
           <div>
-            <h2 className="font-bold text-lg text-foreground">POLADC</h2>
+            <h2 className="font-bold text-lg text-foreground">POLABDC</h2>
             <p className="text-xs text-muted-foreground">Klinik Gigi</p>
           </div>
         </div>
@@ -82,7 +100,10 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-muted-foreground px-3">Menu Utama</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-muted-foreground px-3">
+            Menu Utama
+          </SidebarGroupLabel>
+
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -90,7 +111,7 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     asChild
                     className={
-                      location === item.path
+                      pathname === item.path
                         ? "bg-sidebar-accent text-sidebar-accent-foreground"
                         : ""
                     }
@@ -108,14 +129,17 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-muted-foreground px-3">Pengaturan</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-muted-foreground px-3">
+            Pengaturan
+          </SidebarGroupLabel>
+
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
                   className={
-                    location === "/profile"
+                    pathname === "/profile"
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
                       : ""
                   }
@@ -127,11 +151,12 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
                   className={
-                    location === "/settings"
+                    pathname === "/settings"
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
                       : ""
                   }
@@ -152,11 +177,12 @@ export function AppSidebar() {
         <div className="space-y-3">
           <div className="flex items-center gap-3 p-2 rounded-lg hover-elevate active-elevate-2">
             <Avatar className="h-10 w-10">
-              <AvatarImage src={user?.photoUrl || undefined} />
+              <AvatarImage src={user?.photoUrl || undefined} alt={user?.fullName || "User"} />
               <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                 {userInitials}
               </AvatarFallback>
             </Avatar>
+
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">
                 {user?.fullName}
@@ -165,16 +191,19 @@ export function AppSidebar() {
                 {user?.role === "dokter" ? "Dokter Gigi" : "Perawat"}
               </p>
             </div>
-            {notifications && notifications > 0 && (
+
+            {!!notifications && notifications > 0 && (
               <Badge variant="destructive" className="text-xs px-1.5 py-0">
                 {notifications}
               </Badge>
             )}
           </div>
+
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover-elevate active-elevate-2 rounded-lg"
             data-testid="button-logout"
+            type="button"
           >
             <LogOut className="w-4 h-4" />
             <span>Keluar</span>

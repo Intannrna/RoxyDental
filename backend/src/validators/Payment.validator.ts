@@ -5,8 +5,8 @@ export const createPaymentSchema = z.object({
   paymentMethod: z.enum(['CASH', 'TRANSFER', 'CARD', 'QRIS'], {
     errorMap: () => ({ message: 'Metode pembayaran tidak valid' })
   }),
-  amount: z.number().positive('Jumlah pembayaran harus lebih dari 0'),
-  paidAmount: z.number().min(0, 'Jumlah yang dibayar tidak boleh negatif'),
+  amount: z.coerce.number().positive('Jumlah pembayaran harus lebih dari 0'),
+  paidAmount: z.coerce.number().min(0, 'Jumlah yang dibayar tidak boleh negatif'),
   referenceNumber: z.string().optional(),
   notes: z.string().optional()
 });
@@ -15,8 +15,8 @@ export const updatePaymentSchema = z.object({
   paymentMethod: z.enum(['CASH', 'TRANSFER', 'CARD', 'QRIS'], {
     errorMap: () => ({ message: 'Metode pembayaran tidak valid' })
   }).optional(),
-  amount: z.number().positive('Jumlah pembayaran harus lebih dari 0').optional(),
-  paidAmount: z.number().min(0, 'Jumlah yang dibayar tidak boleh negatif').optional(),
+  amount: z.coerce.number().positive('Jumlah pembayaran harus lebih dari 0').optional(),
+  paidAmount: z.coerce.number().min(0, 'Jumlah yang dibayar tidak boleh negatif').optional(),
   referenceNumber: z.string().optional(),
   notes: z.string().optional()
 });

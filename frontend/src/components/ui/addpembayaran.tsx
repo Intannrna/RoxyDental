@@ -77,17 +77,14 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
     }
   };
 
-  // ✅ Kembalian: hanya jika bayar > tagihan
   const kembalian = useMemo(() => {
     return Math.max((form.jumlahBayar || 0) - (form.totalTagihan || 0), 0);
   }, [form.jumlahBayar, form.totalTagihan]);
 
-  // ✅ Sisa bayar: hanya jika bayar < tagihan
   const sisaBayar = useMemo(() => {
     return Math.max((form.totalTagihan || 0) - (form.jumlahBayar || 0), 0);
   }, [form.jumlahBayar, form.totalTagihan]);
 
-  // ✅ Status bayar dengan logika bisnis yang tepat
   const statusBayar = useMemo(() => {
     if (!form.totalTagihan) return "Belum diisi";
     if ((form.jumlahBayar || 0) === 0) return "Belum bayar";
@@ -118,7 +115,7 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
       try {
         const response = await visitService.getCompletedVisits(1, 50, q);
         const visits = response.visits || [];
-        
+
         const mappedOptions: VisitOption[] = visits.map((visit) => ({
           visitId: visit.id,
           visitNumber: visit.visitNumber,
@@ -148,9 +145,9 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
     try {
       const visitDetail = await visitService.getVisitById(v.visitId);
       setSelectedVisit(visitDetail);
-      
+
       update("visitId", v.visitId);
-      
+
       const totalCost = visitDetail.totalCost || 0;
       update("totalTagihan", totalCost);
       setTotalInput(totalCost.toString());
@@ -175,27 +172,13 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
     setOpenList(false);
   };
 
-  // ✅ Validasi yang lebih fleksibel - tidak memaksa jumlah bayar >= total tagihan
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!form.visitId) {
-      newErrors.visitId = "Silakan pilih kunjungan pasien dari hasil pencarian";
-    }
-
-    if (!form.totalTagihan || form.totalTagihan <= 0) {
-      newErrors.totalTagihan = "Total tagihan harus lebih dari 0";
-    }
-
-    if (!form.metode) {
-      newErrors.metode = "Silakan pilih metode pembayaran";
-    }
-
-    // ✅ DIHAPUS: validasi jumlah bayar tidak boleh < total tagihan
-    // Sekarang membolehkan pembayaran partial (DP/cicilan)
-    if (form.jumlahBayar < 0) {
-      newErrors.jumlahBayar = "Jumlah bayar tidak boleh negatif";
-    }
+    if (!form.visitId) newErrors.visitId = "Silakan pilih kunjungan pasien dari hasil pencarian";
+    if (!form.totalTagihan || form.totalTagihan <= 0) newErrors.totalTagihan = "Total tagihan harus lebih dari 0";
+    if (!form.metode) newErrors.metode = "Silakan pilih metode pembayaran";
+    if (form.jumlahBayar < 0) newErrors.jumlahBayar = "Jumlah bayar tidak boleh negatif";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -203,61 +186,57 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) {
-      onSave(form);
-    }
+    if (validate()) onSave(form);
   };
 
-  // ✅ Button SELALU aktif selama data minimal valid
-  const canSave = Boolean(
-    form.visitId && 
-    form.metode && 
-    form.totalTagihan > 0
-    // ✅ DIHAPUS: && form.jumlahBayar >= form.totalTagihan
-  );
+  const canSave = Boolean(form.visitId && form.metode && form.totalTagihan > 0);
 
   return (
     <Card className="w-full max-w-3xl mx-auto rounded-2xl shadow-xl border border-pink-100 overflow-hidden bg-white">
       <div className="h-2 w-full bg-linear-to-r from-pink-500 via-pink-600 to-rose-500" />
 
       <CardContent className="p-0">
-        <div className="max-h-[78vh] overflow-y-auto p-6">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-4 mb-6">
+        {/* ✅ HEADER STICKY (FIX BIAR ATAS TIDAK KOSONG & RAPI) */}
+        <div className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-pink-100 px-6 py-4">
+          <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                Input Pembayaran
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onClose}
-                  className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full h-8 w-8"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </h2>
+              <h2 className="text-xl font-semibold text-gray-900">Input Pembayaran</h2>
               <p className="text-sm text-gray-500 mt-1">
                 Pilih kunjungan pasien dan lengkapi data pembayaran
               </p>
             </div>
 
-            {/* ✅ Status Badge dengan warna yang sesuai */}
-            <div
-              className={[
-                "px-3 py-1 rounded-full text-xs font-semibold border shadow-sm whitespace-nowrap",
-                statusBayar === "Lunas"
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                  : statusBayar === "DP/Cicilan"
-                  ? "bg-blue-50 text-blue-700 border-blue-200"
-                  : statusBayar === "Belum bayar"
-                  ? "bg-amber-50 text-amber-700 border-amber-200"
-                  : "bg-gray-50 text-gray-700 border-gray-200",
-              ].join(" ")}
-            >
-              {statusBayar}
+            <div className="flex items-center gap-2">
+              <div
+                className={[
+                  "px-3 py-1 rounded-full text-xs font-semibold border shadow-sm whitespace-nowrap",
+                  statusBayar === "Lunas"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : statusBayar === "DP/Cicilan"
+                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                    : statusBayar === "Belum bayar"
+                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                    : "bg-gray-50 text-gray-700 border-gray-200",
+                ].join(" ")}
+              >
+                {statusBayar}
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full h-9 w-9"
+                aria-label="Tutup"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           </div>
+        </div>
 
+        {/* ✅ BODY SCROLL */}
+        <div className="max-h-[78vh] overflow-y-auto p-6">
           <form onSubmit={handleSubmit}>
             {/* Section: Kunjungan */}
             <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
@@ -298,20 +277,12 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
                   }}
                   disabled={!!form.visitId}
                 />
-                {errors.visitId && (
-                  <p className="text-red-500 text-xs mt-1">{errors.visitId}</p>
-                )}
+                {errors.visitId && <p className="text-red-500 text-xs mt-1">{errors.visitId}</p>}
 
                 {openList && !form.visitId && (
                   <div className="absolute z-20 mt-2 w-full rounded-xl border bg-white shadow-xl overflow-hidden">
                     <div className="px-3 py-2 text-xs text-gray-500 border-b bg-gray-50 flex items-center justify-between">
-                      <span>
-                        {loading
-                          ? "Mencari..."
-                          : options.length
-                          ? "Hasil pencarian"
-                          : "Tidak ada hasil"}
-                      </span>
+                      <span>{loading ? "Mencari..." : options.length ? "Hasil pencarian" : "Tidak ada hasil"}</span>
                     </div>
 
                     <div className="max-h-64 overflow-auto">
@@ -325,9 +296,7 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
                           >
                             <div className="flex items-center justify-between gap-3">
                               <div className="min-w-0 flex-1">
-                                <div className="font-medium text-gray-900 truncate">
-                                  {v.patientName}
-                                </div>
+                                <div className="font-medium text-gray-900 truncate">{v.patientName}</div>
                                 <div className="text-xs text-gray-500 truncate">
                                   {v.visitNumber} • No. Pasien: {v.patientNumber}
                                   {v.medicalRecordNumber && ` • No. RM: ${v.medicalRecordNumber}`}
@@ -344,9 +313,7 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
                         ))}
 
                       {!loading && options.length === 0 && (
-                        <div className="px-3 py-3 text-sm text-gray-600">
-                          Tidak ditemukan. Coba keyword lain.
-                        </div>
+                        <div className="px-3 py-3 text-sm text-gray-600">Tidak ditemukan. Coba keyword lain.</div>
                       )}
                     </div>
                   </div>
@@ -363,33 +330,23 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
             {/* Info Pasien */}
             {selectedVisit && (
               <div className="bg-pink-50 p-4 rounded-xl border border-pink-200 mb-6">
-                <h3 className="font-semibold text-pink-900 mb-2 text-sm">
-                  Informasi Pasien & Kunjungan
-                </h3>
+                <h3 className="font-semibold text-pink-900 mb-2 text-sm">Informasi Pasien & Kunjungan</h3>
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
                     <span className="text-gray-600">Nama:</span>
-                    <p className="font-semibold text-gray-900">
-                      {selectedVisit.patient.fullName}
-                    </p>
+                    <p className="font-semibold text-gray-900">{selectedVisit.patient.fullName}</p>
                   </div>
                   <div>
                     <span className="text-gray-600">No. Pasien:</span>
-                    <p className="font-semibold text-gray-900">
-                      {selectedVisit.patient.patientNumber}
-                    </p>
+                    <p className="font-semibold text-gray-900">{selectedVisit.patient.patientNumber}</p>
                   </div>
                   <div>
                     <span className="text-gray-600">No. RM:</span>
-                    <p className="font-semibold text-gray-900">
-                      {selectedVisit.patient.medicalRecordNumber || "-"}
-                    </p>
+                    <p className="font-semibold text-gray-900">{selectedVisit.patient.medicalRecordNumber || "-"}</p>
                   </div>
                   <div>
                     <span className="text-gray-600">No. Kunjungan:</span>
-                    <p className="font-semibold text-gray-900">
-                      {selectedVisit.visitNumber}
-                    </p>
+                    <p className="font-semibold text-gray-900">{selectedVisit.visitNumber}</p>
                   </div>
                   <div className="col-span-2">
                     <span className="text-gray-600">Tanggal Kunjungan:</span>
@@ -407,9 +364,7 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
             )}
 
             {/* Section: Tagihan */}
-            <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
-              Tagihan
-            </div>
+            <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Tagihan</div>
 
             <div className="mb-6">
               <div
@@ -445,32 +400,24 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
 
                   <div className="hidden md:block text-right text-xs">
                     <div className="text-gray-500">Sisa</div>
-                    <div className="font-semibold text-gray-800">
-                      Rp {formatRupiah(sisaBayar)}
-                    </div>
+                    <div className="font-semibold text-gray-800">Rp {formatRupiah(sisaBayar)}</div>
                   </div>
                 </div>
-                {errors.totalTagihan && (
-                  <p className="text-red-500 text-xs mt-2">{errors.totalTagihan}</p>
-                )}
+
+                {errors.totalTagihan && <p className="text-red-500 text-xs mt-2">{errors.totalTagihan}</p>}
               </div>
             </div>
 
             {/* Section: Pembayaran */}
-            <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
-              Pembayaran
-            </div>
+            <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Pembayaran</div>
 
-            {/* Metode Pembayaran */}
             <div className="mb-4">
               <Label className="text-sm font-medium text-gray-800 mb-2">
                 Metode Pembayaran <span className="text-red-500">*</span>
               </Label>
               <select
                 className={`w-full mt-2 p-3 border rounded-xl bg-gray-50 focus:outline-none focus:ring-2 ${
-                  errors.metode
-                    ? "border-red-500 focus:ring-red-200"
-                    : "focus:ring-pink-200"
+                  errors.metode ? "border-red-500 focus:ring-red-200" : "focus:ring-pink-200"
                 }`}
                 value={form.metode}
                 onChange={(e) => update("metode", e.target.value as PaymentMethodType)}
@@ -481,17 +428,12 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
                 <option value="QRIS">QRIS</option>
                 <option value="TRANSFER">Transfer Bank</option>
               </select>
-              {errors.metode && (
-                <p className="text-red-500 text-xs mt-1">{errors.metode}</p>
-              )}
+              {errors.metode && <p className="text-red-500 text-xs mt-1">{errors.metode}</p>}
             </div>
 
-            {/* Nomor Referensi */}
             {form.metode && form.metode !== "CASH" && (
               <div className="mb-4">
-                <Label className="text-sm font-medium text-gray-800 mb-2">
-                  Nomor Referensi / ID Transaksi
-                </Label>
+                <Label className="text-sm font-medium text-gray-800 mb-2">Nomor Referensi / ID Transaksi</Label>
                 <input
                   type="text"
                   className="w-full mt-2 p-3 border rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pink-200"
@@ -502,7 +444,6 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
               </div>
             )}
 
-            {/* Jumlah Bayar & Kembalian */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
               <div>
                 <Label className="text-sm font-medium text-gray-800">
@@ -512,9 +453,7 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
                   type="text"
                   inputMode="numeric"
                   className={`w-full mt-2 p-3 border rounded-xl bg-gray-50 focus:outline-none focus:ring-2 ${
-                    errors.jumlahBayar
-                      ? "border-red-500 focus:ring-red-200"
-                      : "focus:ring-pink-200"
+                    errors.jumlahBayar ? "border-red-500 focus:ring-red-200" : "focus:ring-pink-200"
                   }`}
                   value={bayarInput}
                   onChange={(e) => {
@@ -528,7 +467,6 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
                   <p className="text-red-500 text-xs mt-1">{errors.jumlahBayar}</p>
                 ) : (
                   <div className="mt-1 text-[11px] text-gray-500">
-                    {/* ✅ Info dinamis berdasarkan status */}
                     {form.jumlahBayar > 0 && form.jumlahBayar < form.totalTagihan ? (
                       <>
                         Sisa bayar: <b className="text-amber-600">Rp {formatRupiah(sisaBayar)}</b>
@@ -536,7 +474,9 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
                     ) : form.jumlahBayar >= form.totalTagihan ? (
                       <span className="text-green-600 font-semibold">✓ Lunas</span>
                     ) : (
-                      <>Sisa bayar: <b>Rp {formatRupiah(sisaBayar)}</b></>
+                      <>
+                        Sisa bayar: <b>Rp {formatRupiah(sisaBayar)}</b>
+                      </>
                     )}
                   </div>
                 )}
@@ -549,17 +489,12 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
                   value={formatRupiah(kembalian)}
                   disabled
                 />
-                <div className="mt-1 text-[11px] text-gray-500">
-                  Otomatis jika bayar &gt; total tagihan
-                </div>
+                <div className="mt-1 text-[11px] text-gray-500">Otomatis jika bayar &gt; total tagihan</div>
               </div>
             </div>
 
-            {/* Catatan */}
             <div className="mb-6">
-              <Label className="text-sm font-medium text-gray-800">
-                Catatan (Opsional)
-              </Label>
+              <Label className="text-sm font-medium text-gray-800">Catatan (Opsional)</Label>
               <input
                 className="w-full mt-2 p-3 border rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pink-200"
                 placeholder="Contoh: Lunas, DP, Cicilan ke-1, dll"
@@ -568,7 +503,6 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
               />
             </div>
 
-            {/* ✅ Info Box - Updated dengan logika bisnis yang benar */}
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-xs flex gap-2">
               <span className="text-blue-600 font-semibold">ℹ️</span>
               <div className="text-blue-800">
@@ -577,12 +511,19 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-[11px]">
                   <li>Total tagihan diambil otomatis dari kunjungan</li>
-                  <li><b>Pembayaran Penuh:</b> Jumlah bayar ≥ total tagihan (Status: LUNAS)</li>
-                  <li><b>Pembayaran Sebagian:</b> Jumlah bayar &lt; total tagihan (Status: DP/CICILAN)</li>
+                  <li>
+                    <b>Pembayaran Penuh:</b> Jumlah bayar ≥ total tagihan (Status: LUNAS)
+                  </li>
+                  <li>
+                    <b>Pembayaran Sebagian:</b> Jumlah bayar &lt; total tagihan (Status: DP/CICILAN)
+                  </li>
                   <li>Anda dapat mengubah total tagihan secara manual jika diperlukan</li>
                 </ul>
               </div>
             </div>
+
+            {/* spacer biar konten tidak ketiban footer sticky */}
+            <div className="h-24" />
           </form>
         </div>
 
@@ -595,9 +536,11 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
               <b className={form.jumlahBayar >= form.totalTagihan ? "text-green-600" : "text-blue-600"}>
                 Rp {formatRupiah(form.jumlahBayar)}
               </b>
-              {/* ✅ Tampilkan info sisa bayar jika partial */}
               {sisaBayar > 0 && form.jumlahBayar > 0 && (
-                <span className="text-amber-600"> • Sisa: <b>Rp {formatRupiah(sisaBayar)}</b></span>
+                <span className="text-amber-600">
+                  {" "}
+                  • Sisa: <b>Rp {formatRupiah(sisaBayar)}</b>
+                </span>
               )}
             </div>
 
@@ -611,10 +554,9 @@ export default function InputPembayaran({ onSave, onClose }: Props) {
                 Batal
               </Button>
 
-              {/* ✅ Button SELALU AKTIF selama data minimal valid */}
               <Button
                 type="button"
-                onClick={handleSubmit}
+                onClick={(e) => handleSubmit(e as any)}
                 className="rounded-xl bg-linear-to-r from-pink-600 to-rose-500 text-white hover:opacity-95 font-semibold shadow-md disabled:opacity-60"
                 disabled={!canSave}
               >

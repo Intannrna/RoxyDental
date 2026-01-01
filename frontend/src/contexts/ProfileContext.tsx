@@ -30,7 +30,7 @@ const defaultProfile: Profile = {
   strNumber: "STR123456",
   status: "Aktif",
   photoUrl: "",
-  workplace: "RosyDental",
+  workplace: "POLABDC",
   joinDate: "2025-12-01",
 };
 

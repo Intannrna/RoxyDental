@@ -1062,10 +1062,10 @@ export default function CommissionReportPage() {
                   <div className="flex items-center justify-between px-3 py-2 border-b border-pink-100">
                     <h3 className="text-sm font-semibold text-pink-700">
                       {modalMode === "medical"
-                        ? "Tambah Laporan Keuangan"
+                        ? ""
                         : modalMode === "procedure"
-                        ? "Tambah Prosedur"
-                        : "Tambah Paket"}
+                        ? ""
+                        : ""}
                     </h3>
 
                     <button

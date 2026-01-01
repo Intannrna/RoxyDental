@@ -76,7 +76,7 @@ export default function Navbar() {
           <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center overflow-hidden">
             <Image
               src="/images/pink.png"
-              alt="Logo POLADC"
+              alt="Logo POLABDC"
               width={28}
               height={28}
               className="object-contain"
@@ -134,7 +134,7 @@ export default function Navbar() {
                     </p>
                     <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
                       <MapPin className="w-3 h-3" />
-                      <span>POLADC</span>
+                      <span>POLABDC</span>
                     </div>
                   </div>
                 </div>

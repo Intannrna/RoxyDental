@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Package, Hash, Boxes, Wallet, Percent, X } from "lucide-react";
+import { Package, Hash, Boxes, Wallet, Percent } from "lucide-react";
 
 interface PacketData {
   name: string;
@@ -73,7 +73,11 @@ function TextField({
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className={icon ? "pl-10 border-pink-200 focus-visible:ring-pink-300 bg-white" : "border-pink-200 focus-visible:ring-pink-300 bg-white"}
+          className={
+            icon
+              ? "pl-10 border-pink-200 focus-visible:ring-pink-300 bg-white"
+              : "border-pink-200 focus-visible:ring-pink-300 bg-white"
+          }
         />
       </div>
     </label>
@@ -212,11 +216,7 @@ export default function AddPacket({ onClose, handleSave }: Props) {
       sku: form.sku.trim(),
       quantity: qty,
       salePrice: sale,
-      // pastikan string valid saat kosong / "."
-      avgComm:
-        form.avgComm === "" || form.avgComm === "."
-          ? "0.00"
-          : form.avgComm,
+      avgComm: form.avgComm === "" || form.avgComm === "." ? "0.00" : form.avgComm,
     };
 
     handleSave(payload);
@@ -225,31 +225,28 @@ export default function AddPacket({ onClose, handleSave }: Props) {
   return (
     <form
       onSubmit={submit}
-      className="w-full max-w-3xl mx-auto rounded-2xl shadow-xl overflow-hidden bg-[#FFF5F7]"
+      className="w-full max-w-3xl mx-auto rounded-2xl shadow-xl overflow-hidden bg-white"
     >
-      {/* HEADER */}
+      {/* ✅ HEADER (FIX BIAR ATAS TIDAK KOSONG) */}
+      <div className="sticky top-0 z-20 bg-white border-b border-pink-100 px-6 py-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Tambah Paket</h2>
+            <p className="text-sm text-gray-600">
+              Input paket, kuantitas, harga jual, dan komisi rata-rata.
+            </p>
+          </div>
+        </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-full p-1.5 hover:bg-white/20"
-          aria-label="Tutup"
-        >
-          <X className="w-4 h-4 text-white" />
-        </button>
+        <div className="mt-3 text-xs">
+          <span className="text-gray-500">Tipe Data Keuangan:</span>{" "}
+          <span className="font-semibold text-pink-700">Komisi Paket</span>
+        </div>
+      </div>
 
       {/* BODY */}
-      <div className="max-h-[70vh] overflow-y-auto px-6 py-5 space-y-4">
+      <div className="max-h-[70vh] overflow-y-auto px-6 py-5 space-y-4 bg-[#FFF5F7]">
         <section className="bg-white rounded-xl border border-pink-100 p-4">
-          <div className="mb-3">
-            <span className="text-xs font-semibold text-pink-900">
-              Tipe Data Keuangan
-            </span>
-            <div className="mt-1 px-3 py-2 rounded-lg bg-pink-50 border border-pink-100 text-pink-800 text-sm font-semibold">
-              Komisi Paket
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TextField
               label="Nama Paket *"
@@ -270,9 +267,7 @@ export default function AddPacket({ onClose, handleSave }: Props) {
         </section>
 
         <section className="bg-white rounded-xl border border-pink-100 p-4">
-          <h3 className="text-sm font-bold text-pink-900 mb-3">
-            Kuantitas, Harga & Komisi
-          </h3>
+          <h3 className="text-sm font-bold text-pink-900 mb-3">Kuantitas, Harga & Komisi</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <QtyInput

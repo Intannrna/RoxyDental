@@ -119,7 +119,7 @@ function DashboardContent() {
 
                 <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
                   <MapPin className="w-4 h-4" />
-                  <span>POLADC</span>
+                  <span>POLABDC</span>
                 </div>
 
 <Badge className="mt-3 bg-pink-50 text-pink-700 border border-pink-200 w-fit px-4 py-1.5 text-xs font-semibold rounded-full shadow-sm">
@@ -246,7 +246,7 @@ function DashboardContent() {
               <CardContent className="px-6 py-6 h-full flex flex-col space-y-8">
                 {/* Pendidikan - Data dari Database */}
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2 mt-4">
+                  <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2 mt-6">
                     <GraduationCap className="w-5 h-5 text-pink-600" />
                     Pendidikan
                   </h4>

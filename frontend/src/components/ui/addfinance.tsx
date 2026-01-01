@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,8 +11,6 @@ import {
   Package,
   Pill,
   Scissors,
-  ClipboardList,
-  X,
 } from "lucide-react";
 
 /* =======================
@@ -90,9 +89,7 @@ function MoneyInput({
           className="pl-16 border-pink-200 focus-visible:ring-pink-300 bg-white"
         />
       </div>
-      <p className="mt-1 text-[11px] text-gray-500">
-        Isi angka saja (tanpa titik/koma).
-      </p>
+      <p className="mt-1 text-[11px] text-gray-500">Isi angka saja (tanpa titik/koma).</p>
     </label>
   );
 }
@@ -188,130 +185,128 @@ export default function AddFinanceData({ onClose, handleSave }: Props) {
   return (
     <form
       onSubmit={submit}
-      className="w-full max-w-3xl mx-auto bg-[#FFF5F7] rounded-2xl shadow-xl overflow-hidden"
+      className="w-full max-w-3xl mx-auto rounded-2xl shadow-xl overflow-hidden bg-white"
     >
-      {/* ================= HEADER ================= */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-full p-1.5 hover:bg-white/20"
-          aria-label="Tutup"
-        >
-          <X className="w-4 h-4 text-white" />
-        </button>
+      {/* ================= HEADER (FIX BIAR ATAS TIDAK KOSONG) ================= */}
+      <div className="sticky top-0 z-20 bg-white border-b border-pink-100 px-6 py-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Tambah Data Keuangan</h2>
+            <p className="text-sm text-gray-600">
+              Tambahkan data keuangan baru ke dalam sistem
+            </p>
+          </div>
+        </div>
 
+        <div className="mt-3 text-xs">
+          <span className="text-gray-500">Tipe Data Keuangan:</span>{" "}
+          <span className="font-semibold text-pink-700">{form.tipe}</span>
+        </div>
+      </div>
 
       {/* ================= BODY ================= */}
-      <div className="max-h-[70vh] overflow-y-auto px-6 py-5 space-y-4">
+      <div className="max-h-[70vh] overflow-y-auto px-6 py-5 space-y-4 bg-[#FFF5F7]">
         {/* IDENTITAS */}
-        <section className="bg-white rounded-xl border border-pink-100 p-4">
+        <Card className="rounded-xl border border-pink-100 shadow-sm">
+          <CardContent className="p-4 space-y-3">
+            <label className="block">
+              <span className="text-xs font-semibold text-pink-900">
+                Nama Tenaga Medis 
+              </span>
+              <Input
+                value={form.nama}
+                onChange={(e) => update("nama", e.target.value)}
+                placeholder="Contoh: drg. Azril"
+                className="mt-1 border-pink-200 focus-visible:ring-pink-300 bg-white"
+              />
+            </label>
 
-          <div className="mb-3">
-            <span className="text-xs font-semibold text-pink-900">
-              Tipe Data Keuangan
-            </span>
-            <div className="mt-1 px-3 py-2 rounded-lg bg-pink-50 border border-pink-100 text-pink-800 text-sm font-semibold">
-              {form.tipe}
-            </div>
-          </div>
-
-          <label className="block mb-3">
-            <span className="text-xs font-semibold text-pink-900">
-              Nama Tenaga Medis *
-            </span>
-            <Input
-              value={form.nama}
-              onChange={(e) => update("nama", e.target.value)}
-              placeholder="Contoh: drg. Azril"
-              className="mt-1 border-pink-200 focus-visible:ring-pink-300 bg-white"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-semibold text-pink-900">Prosedur</span>
-            <Input
-              value={form.prosedur}
-              onChange={(e) => update("prosedur", e.target.value)}
-              placeholder="Contoh: Scaling Gigi"
-              className="mt-1 border-pink-200 focus-visible:ring-pink-300 bg-white"
-            />
-          </label>
-        </section>
+            <label className="block">
+              <span className="text-xs font-semibold text-pink-900">Prosedur</span>
+              <Input
+                value={form.prosedur}
+                onChange={(e) => update("prosedur", e.target.value)}
+                placeholder="Contoh: Scaling Gigi"
+                className="mt-1 border-pink-200 focus-visible:ring-pink-300 bg-white"
+              />
+            </label>
+          </CardContent>
+        </Card>
 
         {/* BIAYA & KOMISI */}
-        <section className="bg-white rounded-xl border border-pink-100 p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-sm font-bold text-pink-900">
-              Komponen Biaya & Komisi
-            </h3>
-            <span className="text-xs text-gray-600">
-              Total:{" "}
-              <span className="font-bold text-pink-700">
-                Rp {previewTotal.toLocaleString("id-ID")}
+        <Card className="rounded-xl border border-pink-100 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-center mb-3 mt-5">
+              <h3 className="text-sm font-bold text-pink-900">Komponen Biaya & Komisi</h3>
+              <span className="text-xs text-gray-600">
+                Total:{" "}
+                <span className="font-bold text-pink-700">
+                  Rp {previewTotal.toLocaleString("id-ID")}
+                </span>
               </span>
-            </span>
-          </div>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <MoneyInput
-              label="Potongan Awal"
-              value={form.potongan}
-              onChange={(v) => update("potongan", v)}
-              icon={<Scissors className="w-4 h-4" />}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MoneyInput
+                label="Potongan Awal"
+                value={form.potongan}
+                onChange={(v) => update("potongan", v)}
+                icon={<Scissors className="w-4 h-4" />}
+              />
 
-            <MoneyInput
-              label="Harga Modal (BHP)"
-              value={form.bhpHarga}
-              onChange={(v) => update("bhpHarga", v)}
-            />
+              <MoneyInput
+                label="Harga Modal (BHP)"
+                value={form.bhpHarga}
+                onChange={(v) => update("bhpHarga", v)}
+              />
 
-            <PercentInput
-              label="Komisi (BHP)"
-              value={form.bhpKomisi}
-              onChange={(v) => update("bhpKomisi", v)}
-            />
+              <PercentInput
+                label="Komisi (BHP)"
+                value={form.bhpKomisi}
+                onChange={(v) => update("bhpKomisi", v)}
+              />
 
-            <MoneyInput
-              label="Harga Modal (Farmasi)"
-              value={form.farmasiHarga}
-              onChange={(v) => update("farmasiHarga", v)}
-              icon={<Pill className="w-4 h-4" />}
-            />
+              <MoneyInput
+                label="Harga Modal (Farmasi)"
+                value={form.farmasiHarga}
+                onChange={(v) => update("farmasiHarga", v)}
+                icon={<Pill className="w-4 h-4" />}
+              />
 
-            <PercentInput
-              label="Komisi (Farmasi)"
-              value={form.farmasiKomisi}
-              onChange={(v) => update("farmasiKomisi", v)}
-            />
+              <PercentInput
+                label="Komisi (Farmasi)"
+                value={form.farmasiKomisi}
+                onChange={(v) => update("farmasiKomisi", v)}
+              />
 
-            <MoneyInput
-              label="Paket"
-              value={form.paketHarga}
-              onChange={(v) => update("paketHarga", v)}
-              icon={<Package className="w-4 h-4" />}
-            />
+              <MoneyInput
+                label="Paket"
+                value={form.paketHarga}
+                onChange={(v) => update("paketHarga", v)}
+                icon={<Package className="w-4 h-4" />}
+              />
 
-            <PercentInput
-              label="Komisi (Paket)"
-              value={form.paketKomisi}
-              onChange={(v) => update("paketKomisi", v)}
-            />
+              <PercentInput
+                label="Komisi (Paket)"
+                value={form.paketKomisi}
+                onChange={(v) => update("paketKomisi", v)}
+              />
 
-            <MoneyInput
-              label="LAB"
-              value={form.labHarga}
-              onChange={(v) => update("labHarga", v)}
-              icon={<TestTube2 className="w-4 h-4" />}
-            />
+              <MoneyInput
+                label="LAB"
+                value={form.labHarga}
+                onChange={(v) => update("labHarga", v)}
+                icon={<TestTube2 className="w-4 h-4" />}
+              />
 
-            <PercentInput
-              label="Komisi (LAB)"
-              value={form.labKomisi}
-              onChange={(v) => update("labKomisi", v)}
-            />
-          </div>
-        </section>
+              <PercentInput
+                label="Komisi (LAB)"
+                value={form.labKomisi}
+                onChange={(v) => update("labKomisi", v)}
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* ================= FOOTER ================= */}

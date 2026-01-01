@@ -195,12 +195,12 @@ export default function MedicalStaffProfile() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InfoItem label="ID Karyawan" value={profileData?.username || '-'} icon="id" />
+                <InfoItem label="Username" value={profileData?.username || '-'} icon="id" />
                 <InfoItem label="No. STR" value={profileData?.sipNumber || '-'} icon="badge" />
                 <InfoItem label="No. SIP" value={profileData?.sipNumber || '-'} icon="badge" />
                 <InfoItem label="Nomor Telepon" value={profileData?.phone || '-'} icon="phone" />
                 <InfoItem label="Email" value={profileData?.email || '-'} icon="mail" />
-                <InfoItem label="Lokasi Praktik" value="RoxyDental - Jakarta Pusat" icon="map" />
+                <InfoItem label="Lokasi Praktik" value="POLABDC - Jakarta Pusat" icon="map" />
                 <InfoItem 
                   label="Bergabung Sejak" 
                   value={formatDate(profileData?.createdAt)} 
@@ -305,7 +305,7 @@ export default function MedicalStaffProfile() {
         </div>
 
         <p className="text-center text-sm text-[#EB5A88] mt-8">
-          © 2025 RoxyDental. Platform untuk klinik gigi modern
+          © 2025 POLABDC. Platform untuk klinik gigi 
         </p>
       </div>
     </div>

@@ -3,14 +3,32 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronRight, Calendar, Loader2, AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 import DoctorNavbar from "@/components/ui/navbardr";
 import AuthGuard from "@/components/AuthGuard";
-import { calendarService, LeaveRequest, LeaveResponse, CalendarEvent } from "@/services/calendar.service";
+import {
+  calendarService,
+  LeaveRequest,
+  LeaveResponse,
+  CalendarEvent,
+} from "@/services/calendar.service";
 
 interface DisplayEvent {
   id: string;
@@ -23,6 +41,12 @@ interface DisplayEvent {
   color: string;
   type: "Cuti" | "Kunjungan";
 }
+
+// ✅ helper: hapus jam dari ISO datetime (2026-01-02T00:00:00.000Z -> 2026-01-02)
+const formatDateOnly = (dateStr?: string) => {
+  if (!dateStr) return "-";
+  return dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
+};
 
 function CalendarContent() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -40,7 +64,20 @@ function CalendarContent() {
   const [submitting, setSubmitting] = useState(false);
 
   const dayNames = ["MIN", "SEN", "SEL", "RAB", "KAM", "JUM", "SAB"];
-  const monthNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  const monthNames = [
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
+  ];
 
   const generateCalendarDates = () => {
     const year = selectedMonth.getFullYear();
@@ -73,6 +110,7 @@ function CalendarContent() {
   useEffect(() => {
     fetchEvents();
     fetchPendingLeaves();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekDays]);
 
   const fetchEvents = async () => {
@@ -91,16 +129,16 @@ function CalendarContent() {
         reason: event.description,
         startDate: event.startDate,
         endDate: event.endDate,
-        startTime: event.startTime || '00:00',
-        endTime: event.endTime || '23:59',
+        startTime: event.startTime || "00:00",
+        endTime: event.endTime || "23:59",
         color: event.color,
-        type: event.type === 'LEAVE' ? 'Cuti' : 'Kunjungan'
+        type: event.type === "LEAVE" ? "Cuti" : "Kunjungan",
       }));
 
       setEvents(mappedEvents);
     } catch (err: any) {
-      setError(err.message || 'Gagal memuat data kalender');
-      console.error('Error fetching events:', err);
+      setError(err.message || "Gagal memuat data kalender");
+      console.error("Error fetching events:", err);
     } finally {
       setLoading(false);
     }
@@ -111,7 +149,7 @@ function CalendarContent() {
       const response = await calendarService.getPendingLeaves();
       setPendingLeaves(response.data);
     } catch (err: any) {
-      console.error('Error fetching pending leaves:', err);
+      console.error("Error fetching pending leaves:", err);
     }
   };
 
@@ -130,27 +168,25 @@ function CalendarContent() {
 
   const getEventsForTimeSlot = (day: Date, timeSlot: string) => {
     const dateStr = formatDate(day);
-    const [slotHour] = timeSlot.split(':').map(Number);
-    
-    return events.filter(event => {
+    const [slotHour] = timeSlot.split(":").map(Number);
+
+    return events.filter((event) => {
       if (event.startDate !== dateStr) return false;
-      
-      if (event.type === 'Cuti') {
-        return true;
-      }
-      
-      const [startHour] = event.startTime.split(':').map(Number);
+
+      if (event.type === "Cuti") return true;
+
+      const [startHour] = event.startTime.split(":").map(Number);
       return startHour === slotHour;
     });
   };
 
   const hasEventOnDate = (dateStr: string) => {
-    return events.some(l => dateStr >= l.startDate && dateStr <= l.endDate);
+    return events.some((l) => dateStr >= l.startDate && dateStr <= l.endDate);
   };
 
   const handleSaveLeave = async () => {
     if (!formData.reason || !formData.startDate || !formData.endDate) {
-      setError('Mohon lengkapi semua field');
+      setError("Mohon lengkapi semua field");
       return;
     }
 
@@ -162,18 +198,18 @@ function CalendarContent() {
         reason: formData.reason,
         startDate: formData.startDate,
         endDate: formData.endDate,
-        leaveType: 'ANNUAL'
+        leaveType: "ANNUAL",
       };
 
       await calendarService.submitLeaveRequest(leaveData);
-      
+
       setAddDialogOpen(false);
       setFormData({ reason: "", startDate: "", endDate: "" });
-      
+
       await fetchEvents();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Gagal menyimpan pengajuan cuti');
-      console.error('Error submitting leave:', err);
+      setError(err.response?.data?.message || "Gagal menyimpan pengajuan cuti");
+      console.error("Error submitting leave:", err);
     } finally {
       setSubmitting(false);
     }
@@ -187,15 +223,15 @@ function CalendarContent() {
       setError(null);
 
       await calendarService.approveLeave(selectedLeave.id);
-      
+
       setApproveDialogOpen(false);
       setSelectedLeave(null);
-      
+
       await fetchEvents();
       await fetchPendingLeaves();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Gagal menyetujui pengajuan cuti');
-      console.error('Error approving leave:', err);
+      setError(err.response?.data?.message || "Gagal menyetujui pengajuan cuti");
+      console.error("Error approving leave:", err);
     } finally {
       setSubmitting(false);
     }
@@ -203,7 +239,7 @@ function CalendarContent() {
 
   const handleRejectLeave = async () => {
     if (!selectedLeave || !rejectionReason) {
-      setError('Alasan penolakan harus diisi');
+      setError("Alasan penolakan harus diisi");
       return;
     }
 
@@ -212,16 +248,16 @@ function CalendarContent() {
       setError(null);
 
       await calendarService.rejectLeave(selectedLeave.id, rejectionReason);
-      
+
       setRejectDialogOpen(false);
       setSelectedLeave(null);
       setRejectionReason("");
-      
+
       await fetchEvents();
       await fetchPendingLeaves();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Gagal menolak pengajuan cuti');
-      console.error('Error rejecting leave:', err);
+      setError(err.response?.data?.message || "Gagal menolak pengajuan cuti");
+      console.error("Error rejecting leave:", err);
     } finally {
       setSubmitting(false);
     }
@@ -243,27 +279,42 @@ function CalendarContent() {
       <DoctorNavbar />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 p-6">
-        
         <div className="lg:col-span-3">
           <Card className="shadow-lg rounded-lg">
             <CardContent className="p-4">
-              
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3 mt-6">
-                  <Button size="sm" variant="ghost" onClick={() => navigateWeek(-1)} className="hover:bg-pink-100 p-2 rounded">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => navigateWeek(-1)}
+                    className="hover:bg-pink-100 p-2 rounded"
+                  >
                     <ChevronLeft className="w-5 h-5" />
                   </Button>
 
                   <div className="text-lg font-semibold">
-                    {weekDays[0].getDate()} {monthNames[weekDays[0].getMonth()]} - {weekDays[6].getDate()} {monthNames[weekDays[6].getMonth()]} {weekDays[0].getFullYear()}
+                    {weekDays[0].getDate()} {monthNames[weekDays[0].getMonth()]} -{" "}
+                    {weekDays[6].getDate()} {monthNames[weekDays[6].getMonth()]}{" "}
+                    {weekDays[0].getFullYear()}
                   </div>
 
-                  <Button size="sm" variant="ghost" onClick={() => navigateWeek(1)} className="hover:bg-pink-100 p-2 rounded">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => navigateWeek(1)}
+                    className="hover:bg-pink-100 p-2 rounded"
+                  >
                     <ChevronRight className="w-5 h-5" />
                   </Button>
                 </div>
 
-                <Button size="sm" variant="outline" className="gap-2 border-pink-300 text-pink-700 hover:bg-pink-50" onClick={() => setAddDialogOpen(true)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 border-pink-300 text-pink-700 hover:bg-pink-50"
+                  onClick={() => setAddDialogOpen(true)}
+                >
                   <Calendar className="w-4 h-4" /> Ajukan Cuti
                 </Button>
               </div>
@@ -276,18 +327,24 @@ function CalendarContent() {
                 <div className="flex flex-col items-center justify-center py-20">
                   <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
                   <p className="text-red-600 text-sm">{error}</p>
-                  <Button onClick={fetchEvents} size="sm" className="mt-4 bg-pink-600 hover:bg-pink-700">Coba Lagi</Button>
+                  <Button onClick={fetchEvents} size="sm" className="mt-4 bg-pink-600 hover:bg-pink-700">
+                    Coba Lagi
+                  </Button>
                 </div>
               ) : (
                 <div className="overflow-auto max-h-[640px] border border-pink-200 rounded-lg bg-white">
                   <div className="grid grid-cols-8 min-w-[980px]">
-
                     <div className="sticky top-0 left-0 z-30 bg-pink-50 p-3 border-r border-b border-pink-200"></div>
 
                     {weekDays.map((day, idx) => (
-                      <div key={idx} className="sticky top-0 bg-pink-100 text-center p-3 border-r border-b border-pink-200 z-20">
+                      <div
+                        key={idx}
+                        className="sticky top-0 bg-pink-100 text-center p-3 border-r border-b border-pink-200 z-20"
+                      >
                         <div className="text-xs font-medium uppercase">{dayNames[day.getDay()]}</div>
-                        <div className="text-base font-bold mt-1">{day.getDate()} {monthNames[day.getMonth()].slice(0, 3)}</div>
+                        <div className="text-base font-bold mt-1">
+                          {day.getDate()} {monthNames[day.getMonth()].slice(0, 3)}
+                        </div>
                       </div>
                     ))}
 
@@ -300,12 +357,21 @@ function CalendarContent() {
                         {weekDays.map((day, dIdx) => {
                           const dayEvents = getEventsForTimeSlot(day, time);
                           return (
-                            <div key={`${tIdx}-${dIdx}`} className="border-r border-b border-pink-200 p-1.5 min-h-16 relative hover:bg-pink-50 cursor-pointer" onClick={() => handleMainCalendarClick(day)}>
-                              {dayEvents.map(l => (
-                                <div key={l.id} className={`${l.color} text-pink-900 text-xs p-1.5 rounded-lg shadow-md mb-1.5`}>
+                            <div
+                              key={`${tIdx}-${dIdx}`}
+                              className="border-r border-b border-pink-200 p-1.5 min-h-16 relative hover:bg-pink-50 cursor-pointer"
+                              onClick={() => handleMainCalendarClick(day)}
+                            >
+                              {dayEvents.map((l) => (
+                                <div
+                                  key={l.id}
+                                  className={`${l.color} text-pink-900 text-xs p-1.5 rounded-lg shadow-md mb-1.5`}
+                                >
                                   <div className="font-semibold text-[11px]">{l.doctor}</div>
                                   <div className="text-[10px]">{l.reason}</div>
-                                  <div className="text-[10px]">{l.startTime} - {l.endTime}</div>
+                                  <div className="text-[10px]">
+                                    {l.startTime} - {l.endTime}
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -316,34 +382,72 @@ function CalendarContent() {
                   </div>
                 </div>
               )}
-
             </CardContent>
           </Card>
         </div>
 
         <div className="space-y-6">
-
           <Card className="shadow-md rounded-lg">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3 gap-2">
-                <select value={selectedMonth.getMonth()} onChange={e => { const newDate = new Date(selectedMonth); newDate.setMonth(parseInt(e.target.value)); setSelectedMonth(newDate); }} className="border border-pink-300 rounded px-2 py-1 text-sm mt-5">
-                  {monthNames.map((m, idx) => (<option key={idx} value={idx}>{m}</option>))}
+                <select
+                  value={selectedMonth.getMonth()}
+                  onChange={(e) => {
+                    const newDate = new Date(selectedMonth);
+                    newDate.setMonth(parseInt(e.target.value));
+                    setSelectedMonth(newDate);
+                  }}
+                  className="border border-pink-300 rounded px-2 py-1 text-sm mt-5"
+                >
+                  {monthNames.map((m, idx) => (
+                    <option key={idx} value={idx}>
+                      {m}
+                    </option>
+                  ))}
                 </select>
 
-                <input type="number" value={selectedMonth.getFullYear()} onChange={e => { const newDate = new Date(selectedMonth); newDate.setFullYear(parseInt(e.target.value)); setSelectedMonth(newDate); }} className="border border-pink-300 rounded px-2 py-1 text-sm w-20 mt-5" />
+                <input
+                  type="number"
+                  value={selectedMonth.getFullYear()}
+                  onChange={(e) => {
+                    const newDate = new Date(selectedMonth);
+                    newDate.setFullYear(parseInt(e.target.value));
+                    setSelectedMonth(newDate);
+                  }}
+                  className="border border-pink-300 rounded px-2 py-1 text-sm w-20 mt-5"
+                />
               </div>
 
               <div className="grid grid-cols-7 gap-1 text-center text-xs mt-2">
-                {dayNames.map(d => (<div key={d} className="font-semibold py-2">{d}</div>))}
+                {dayNames.map((d) => (
+                  <div key={d} className="font-semibold py-2">
+                    {d}
+                  </div>
+                ))}
 
                 {calendarDates.map((date, idx) => {
-                  const dateStr = `${selectedMonth.getFullYear()}-${(selectedMonth.getMonth() + 1).toString().padStart(2, "0")}-${date?.toString().padStart(2, "0")}`;
-                  const isSelected = currentDate.getDate() === date && selectedMonth.getMonth() === currentDate.getMonth();
+                  const dateStr = `${selectedMonth.getFullYear()}-${(selectedMonth.getMonth() + 1)
+                    .toString()
+                    .padStart(2, "0")}-${date?.toString().padStart(2, "0")}`;
+                  const isSelected =
+                    currentDate.getDate() === date && selectedMonth.getMonth() === currentDate.getMonth();
 
                   return (
-                    <div key={idx} className={`py-2 cursor-pointer rounded relative transition ${isSelected ? "bg-pink-600 text-white font-bold" : date ? "text-pink-900 hover:bg-pink-200" : "text-pink-300"}`} onClick={() => date && handleMiniCalendarClick(new Date(dateStr))}>
+                    <div
+                      key={idx}
+                      className={`py-2 cursor-pointer rounded relative transition ${
+                        isSelected
+                          ? "bg-pink-600 text-white font-bold"
+                          : date
+                          ? "text-pink-900 hover:bg-pink-200"
+                          : "text-pink-300"
+                      }`}
+                      onClick={() => date && handleMiniCalendarClick(new Date(dateStr))}
+                    >
                       {date || ""}
-                      {date && hasEventOnDate(dateStr) && (<div className="w-2 h-2 bg-pink-500 rounded-full absolute top-1 right-1"></div>)}
+                      {date && hasEventOnDate(dateStr) && (
+                        <div className="w-2 h-2 bg-pink-500 rounded-full absolute top-1 right-1"></div>
+                      )}
                     </div>
                   );
                 })}
@@ -351,6 +455,7 @@ function CalendarContent() {
             </CardContent>
           </Card>
 
+          {/* ✅ Pengajuan Cuti Menunggu */}
           {pendingLeaves.length > 0 && (
             <Card className="shadow-md rounded-lg border-2 border-yellow-300">
               <CardContent className="p-4 max-h-[200px] overflow-auto space-y-2">
@@ -358,15 +463,23 @@ function CalendarContent() {
                   <span className="w-1.5 h-6 bg-yellow-500 rounded"></span> Pengajuan Cuti Menunggu
                 </h2>
 
-                {pendingLeaves.map(leave => (
-                  <div key={leave.id} className="bg-yellow-50 border border-yellow-300 text-pink-900 p-3 rounded-lg shadow">
+                {pendingLeaves.map((leave) => (
+                  <div
+                    key={leave.id}
+                    className="bg-yellow-50 border border-yellow-300 text-pink-900 p-3 rounded-lg shadow"
+                  >
                     <div className="font-semibold text-sm">{leave.requester.fullName}</div>
                     <div className="text-[10px] mt-1">{leave.reason}</div>
-                    <div className="text-[10px]">{leave.startDate} - {leave.endDate}</div>
+
+                    {/* ✅ FIX: hapus jam */}
+                    <div className="text-[10px]">
+                      {formatDateOnly(leave.startDate)} - {formatDateOnly(leave.endDate)}
+                    </div>
+
                     <div className="flex gap-2 mt-2">
-                      <Button 
-                        size="sm" 
-                        className="bg-green-600 hover:bg-green-700 text-white h-7 text-xs flex-1" 
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white h-7 text-xs flex-1"
                         onClick={() => {
                           setSelectedLeave(leave);
                           setApproveDialogOpen(true);
@@ -374,9 +487,9 @@ function CalendarContent() {
                       >
                         <CheckCircle className="w-3 h-3 mr-1" /> Setuju
                       </Button>
-                      <Button 
-                        size="sm" 
-                        className="bg-red-600 hover:bg-red-700 text-white h-7 text-xs flex-1" 
+                      <Button
+                        size="sm"
+                        className="bg-red-600 hover:bg-red-700 text-white h-7 text-xs flex-1"
                         onClick={() => {
                           setSelectedLeave(leave);
                           setRejectDialogOpen(true);
@@ -391,27 +504,34 @@ function CalendarContent() {
             </Card>
           )}
 
+          {/* Jadwal */}
           <Card className="shadow-md rounded-lg">
             <CardContent className="p-4 max-h-[300px] overflow-auto space-y-2">
               <h2 className="font-semibold text-pink-900 mt-6 flex items-center gap-2 text-lg">
                 <span className="w-1.5 h-6 bg-pink-500 rounded"></span> Jadwal
               </h2>
 
-              {events.length === 0 && (<div className="text-xs text-pink-700">Belum ada jadwal</div>)}
+              {events.length === 0 && <div className="text-xs text-pink-700">Belum ada jadwal</div>}
 
-              {events.map(l => (
+              {events.map((l) => (
                 <div key={l.id} className={`${l.color} text-pink-900 p-2 rounded-lg shadow`}>
                   <div className="font-semibold text-sm">{l.doctor}</div>
                   <div className="text-[10px]">{l.reason}</div>
-                  <div className="text-[10px]">{l.type === 'Cuti' ? `${l.startDate} - ${l.endDate}` : `${l.startDate} ${l.startTime}`}</div>
+
+                  {/* ✅ FIX: tanggal-only */}
+                  <div className="text-[10px]">
+                    {l.type === "Cuti"
+                      ? `${formatDateOnly(l.startDate)} - ${formatDateOnly(l.endDate)}`
+                      : `${formatDateOnly(l.startDate)} ${l.startTime}`}
+                  </div>
                 </div>
               ))}
             </CardContent>
           </Card>
-
         </div>
       </div>
 
+      {/* Dialog Ajukan Cuti */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="max-w-md bg-pink-50 rounded-lg shadow-lg p-6 space-y-4">
           <DialogHeader>
@@ -423,18 +543,31 @@ function CalendarContent() {
           <div className="space-y-4">
             <div>
               <Label className="text-pink-900">Alasan Cuti</Label>
-              <Input placeholder="Masukkan alasan cuti" value={formData.reason} onChange={e => setFormData({ ...formData, reason: e.target.value })} className="border-pink-300 focus:border-pink-500" />
+              <Input
+                placeholder="Masukkan alasan cuti"
+                value={formData.reason}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                className="border-pink-300 focus:border-pink-500"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-pink-900">Tanggal Mulai</Label>
-                <Input type="date" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} />
+                <Input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                />
               </div>
 
               <div>
                 <Label className="text-pink-900">Tanggal Selesai</Label>
-                <Input type="date" value={formData.endDate} onChange={e => setFormData({ ...formData, endDate: e.target.value })} />
+                <Input
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                />
               </div>
             </div>
 
@@ -446,19 +579,28 @@ function CalendarContent() {
             )}
 
             <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" className="border-pink-300 text-pink-700 hover:bg-pink-50" onClick={() => setAddDialogOpen(false)} disabled={submitting}>
+              <Button
+                variant="outline"
+                className="border-pink-300 text-pink-700 hover:bg-pink-50"
+                onClick={() => setAddDialogOpen(false)}
+                disabled={submitting}
+              >
                 Batal
               </Button>
 
-              <Button className="bg-pink-600 text-white hover:bg-pink-700 shadow" onClick={handleSaveLeave} disabled={submitting}>
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan'}
+              <Button
+                className="bg-pink-600 text-white hover:bg-pink-700 shadow"
+                onClick={handleSaveLeave}
+                disabled={submitting}
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Simpan"}
               </Button>
             </div>
           </div>
-
         </DialogContent>
       </Dialog>
 
+      {/* Dialog Approve */}
       <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
         <DialogContent className="max-w-md bg-green-50 rounded-lg shadow-lg p-6 space-y-4">
           <DialogHeader>
@@ -473,17 +615,13 @@ function CalendarContent() {
                 <div className="grid grid-cols-[90px_10px_1fr] items-start">
                   <span className="font-semibold text-slate-700">Perawat</span>
                   <span className="text-slate-500">:</span>
-                  <span className="text-slate-800">
-                    {selectedLeave.requester.fullName}
-                  </span>
+                  <span className="text-slate-800">{selectedLeave.requester.fullName}</span>
                 </div>
 
                 <div className="grid grid-cols-[90px_10px_1fr] items-start">
                   <span className="font-semibold text-slate-700">Alasan</span>
                   <span className="text-slate-500">:</span>
-                  <span className="text-slate-800">
-                    {selectedLeave.reason}
-                  </span>
+                  <span className="text-slate-800">{selectedLeave.reason}</span>
                 </div>
 
                 <div className="grid grid-cols-[90px_10px_1fr] items-start">
@@ -508,12 +646,21 @@ function CalendarContent() {
               )}
 
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" className="border-green-300 text-green-700 hover:bg-green-50" onClick={() => setApproveDialogOpen(false)} disabled={submitting}>
+                <Button
+                  variant="outline"
+                  className="border-green-300 text-green-700 hover:bg-green-50"
+                  onClick={() => setApproveDialogOpen(false)}
+                  disabled={submitting}
+                >
                   Batal
                 </Button>
 
-                <Button className="bg-green-600 text-white hover:bg-green-700 shadow" onClick={handleApproveLeave} disabled={submitting}>
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Setujui'}
+                <Button
+                  className="bg-green-600 text-white hover:bg-green-700 shadow"
+                  onClick={handleApproveLeave}
+                  disabled={submitting}
+                >
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Setujui"}
                 </Button>
               </div>
             </div>
@@ -521,6 +668,7 @@ function CalendarContent() {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog Reject */}
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <DialogContent className="max-w-md bg-red-50 rounded-lg shadow-lg p-6 space-y-4">
           <DialogHeader>
@@ -531,22 +679,17 @@ function CalendarContent() {
 
           {selectedLeave && (
             <div className="space-y-3">
-              {/* Info Pengajuan */}
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2 text-sm">
                 <div className="grid grid-cols-[90px_10px_1fr] items-start">
                   <span className="font-semibold text-red-800">Perawat</span>
                   <span className="text-red-600">:</span>
-                  <span className="text-red-900">
-                    {selectedLeave.requester.fullName}
-                  </span>
+                  <span className="text-red-900">{selectedLeave.requester.fullName}</span>
                 </div>
 
                 <div className="grid grid-cols-[90px_10px_1fr] items-start">
                   <span className="font-semibold text-red-800">Alasan</span>
                   <span className="text-red-600">:</span>
-                  <span className="text-red-900">
-                    {selectedLeave.reason}
-                  </span>
+                  <span className="text-red-900">{selectedLeave.reason}</span>
                 </div>
 
                 <div className="grid grid-cols-[90px_10px_1fr] items-start">
@@ -559,12 +702,9 @@ function CalendarContent() {
                 </div>
               </div>
 
-              {/* Alasan Penolakan */}
               <div className="mt-4 space-y-1">
-                <Label className="text-sm font-semibold text-red-900">
-                  Alasan Penolakan
-                </Label>
-               <Textarea
+                <Label className="text-sm font-semibold text-red-900">Alasan Penolakan</Label>
+                <Textarea
                   placeholder="Masukkan alasan penolakan..."
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
@@ -589,19 +729,27 @@ function CalendarContent() {
               )}
 
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" className="border-red-300 text-red-700 hover:bg-red-50" onClick={() => setRejectDialogOpen(false)} disabled={submitting}>
+                <Button
+                  variant="outline"
+                  className="border-red-300 text-red-700 hover:bg-red-50"
+                  onClick={() => setRejectDialogOpen(false)}
+                  disabled={submitting}
+                >
                   Batal
                 </Button>
 
-                <Button className="bg-red-600 text-white hover:bg-red-700 shadow" onClick={handleRejectLeave} disabled={submitting}>
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Tolak'}
+                <Button
+                  className="bg-red-600 text-white hover:bg-red-700 shadow"
+                  onClick={handleRejectLeave}
+                  disabled={submitting}
+                >
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Tolak"}
                 </Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
