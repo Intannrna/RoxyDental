@@ -6,6 +6,15 @@ import { successResponse } from '../utils/response.util';
 const leaveService = new LeaveService();
 
 export class LeaveController {
+  async getAllApprovedLeaves(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const leaves = await leaveService.getAllApprovedLeaves();
+      res.json(successResponse('Data cuti berhasil diambil', leaves));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getLeaveRequests(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const leaves = await leaveService.getLeaveRequests(req.user!.id);

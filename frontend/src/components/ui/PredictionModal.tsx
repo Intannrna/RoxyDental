@@ -32,7 +32,7 @@ export default function PredictionModal({ onClose }: Props) {
   const fetchPrediction = async () => {
     try {
       const response = await aiService.getPrediction();
-      
+
       if (response.status === "success" || response.status === "warning") {
         setData(response.data);
         if (response.data.length === 0 && response.message) {
@@ -44,8 +44,8 @@ export default function PredictionModal({ onClose }: Props) {
     } catch (err: any) {
       console.error('Prediction fetch error:', err);
       setError(
-        err.response?.data?.message || 
-        err.message || 
+        err.response?.data?.message ||
+        err.message ||
         "Tidak dapat terhubung ke layanan prediksi"
       );
     } finally {
@@ -93,22 +93,19 @@ export default function PredictionModal({ onClose }: Props) {
             <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
               <p className="text-red-800 text-sm font-medium">{error}</p>
             </div>
-            
+
             <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4">
-              <p className="text-blue-900 font-semibold text-sm mb-3 flex items-center gap-2">
+              <p className="text-blue-900 font-semibold text-sm mb-1 flex items-center gap-2">
                 <Activity className="w-4 h-4" />
-                Langkah Troubleshooting:
+                Informasi Sistem:
               </p>
-              <ol className="text-blue-800 text-xs space-y-2 list-decimal list-inside ml-2">
-                <li className="leading-relaxed">Pastikan AI Service berjalan di terminal terpisah</li>
-                <li className="leading-relaxed">Jalankan: <code className="bg-blue-100 px-2 py-0.5 rounded font-mono text-xs">cd roxydental-ai && uvicorn api:app --reload</code></li>
-                <li className="leading-relaxed">Pastikan minimal 5 minggu data transaksi tersedia</li>
-                <li className="leading-relaxed">Cek koneksi database di file .env</li>
-              </ol>
+              <p className="text-blue-800 text-sm">
+                Terjadi masalah koneksi database. Silakan hubungi administrator sistem jika masalah berlanjut.
+              </p>
             </div>
 
-            <Button 
-              onClick={onClose} 
+            <Button
+              onClick={onClose}
               className="w-full bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md transition-all duration-200 py-6 rounded-lg font-medium"
             >
               Tutup
@@ -134,12 +131,12 @@ export default function PredictionModal({ onClose }: Props) {
           <CardContent className="p-6 space-y-4 bg-white">
             <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4">
               <p className="text-slate-800 font-medium leading-relaxed">
-                Data transaksi belum mencukupi untuk membuat prediksi. 
+                Data transaksi belum mencukupi untuk membuat prediksi.
                 Minimal 5 minggu data historis diperlukan.
               </p>
             </div>
-            <Button 
-              onClick={onClose} 
+            <Button
+              onClick={onClose}
               className="w-full bg-amber-600 hover:bg-amber-700 text-white shadow-sm hover:shadow-md transition-all duration-200 py-6 rounded-lg font-medium"
             >
               Tutup
@@ -230,12 +227,12 @@ export default function PredictionModal({ onClose }: Props) {
                 <LineChart data={data}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#E91E8C" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#E91E8C" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#E91E8C" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#E91E8C" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorPatients" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#D91A7E" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#D91A7E" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#D91A7E" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#D91A7E" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#fce7f3" />
@@ -256,9 +253,9 @@ export default function PredictionModal({ onClose }: Props) {
                     stroke="#E91E8C"
                     style={{ fontSize: '12px' }}
                   />
-                  <YAxis 
-                    yAxisId="right" 
-                    orientation="right" 
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
                     stroke="#D91A7E"
                     style={{ fontSize: '12px' }}
                   />
@@ -282,7 +279,7 @@ export default function PredictionModal({ onClose }: Props) {
                     }}
                   />
 
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ paddingTop: '20px' }}
                     iconType="circle"
                   />
@@ -320,7 +317,7 @@ export default function PredictionModal({ onClose }: Props) {
             </h3>
             <div className="space-y-3">
               {data.map((week, idx) => (
-                <div 
+                <div
                   key={idx}
                   className="flex items-center justify-between p-4 bg-pink-50/50 rounded-lg hover:bg-pink-50 transition-all duration-200"
                 >

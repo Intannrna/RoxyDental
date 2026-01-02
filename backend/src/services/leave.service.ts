@@ -20,6 +20,27 @@ export class LeaveService {
     return leaves;
   }
 
+  async getAllApprovedLeaves() {
+    const leaves = await prisma.leaveRequest.findMany({
+      where: {
+        status: 'APPROVED'
+      },
+      include: {
+        requester: {
+          select: {
+            fullName: true,
+            role: true
+          }
+        }
+      },
+      orderBy: {
+        startDate: 'asc'
+      }
+    });
+
+    return leaves;
+  }
+
   async createLeaveRequest(userId: string, data: any) {
     const leave = await prisma.leaveRequest.create({
       data: {

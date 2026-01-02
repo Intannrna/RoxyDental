@@ -14,10 +14,12 @@ import nurseProfileRoutes from './nurse-profile.routes';
 import financeRoutes from './finance.routes';
 import medicationRoutes from './medication.routes';
 import nurseVisitRoutes from './nurse-visit.routes';
+import calendarRoutes from './calendar.routes';
 
 const router = Router();
 
 router.use('/auth', authRoutes);
+router.use('/calendar', calendarRoutes);
 router.use('/doctor/dashboard', dashboardRoutes);
 router.use('/nurse/dashboard', dashboardNurseRoutes);
 router.use('/nurse', nurseProfileRoutes);
