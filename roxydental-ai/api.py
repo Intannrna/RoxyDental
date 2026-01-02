@@ -183,12 +183,12 @@ FORMAT JAWABAN:
             }],
             "generationConfig": {
                 "temperature": 0.4,          # ✅ lebih konsisten & tidak normatif
-                "maxOutputTokens": 800       # ✅ biar lebih detail
+                "maxOutputTokens": 4000      # ✅ ditingkatkan agar jawaban panjang tidak terpotong
             }
         }
 
         for attempt in range(3):
-            response = requests.post(GEMINI_URL, headers=headers, json=payload, timeout=15)
+            response = requests.post(GEMINI_URL, headers=headers, json=payload, timeout=60)
             
             if response.status_code == 200:
                 result = response.json()

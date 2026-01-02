@@ -26,7 +26,7 @@ export const aiService = {
             return response.data;
         } catch (error: any) {
             console.error('AI Prediction Error:', error);
-            
+
             if (error.response?.status === 503) {
                 return {
                     status: 'error',
@@ -34,7 +34,7 @@ export const aiService = {
                     message: error.response?.data?.message || 'Layanan prediksi sedang tidak tersedia. Silakan hubungi administrator.'
                 };
             }
-            
+
             if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
                 return {
                     status: 'error',
@@ -42,41 +42,41 @@ export const aiService = {
                     message: 'Request timeout. Silakan coba lagi.'
                 };
             }
-            
+
             throw error;
         }
     },
 
     async chatWithTika(message: string, userName: string = 'User'): Promise<ChatResponse> {
         try {
-            const response = await apiClient.post('/ai/chat', { 
-                message, 
-                user_name: userName 
+            const response = await apiClient.post('/ai/chat', {
+                message,
+                user_name: userName
             }, {
-                timeout: 15000
+                timeout: 60000 // Diperlama jadi 60 detik untuk jawaban panjang
             });
             return response.data;
         } catch (error: any) {
             console.error('AI Chat Error:', error);
-            
+
             if (error.response?.status === 503) {
                 return {
                     status: 'error',
                     reply: error.response?.data?.reply || 'Maaf, Tika sedang offline. Silakan coba lagi nanti.'
                 };
             }
-            
+
             if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
                 return {
                     status: 'error',
                     reply: 'Tika membutuhkan waktu terlalu lama. Silakan coba lagi.'
                 };
             }
-            
+
             if (error.response?.data?.reply) {
                 return error.response.data;
             }
-            
+
             return {
                 status: 'error',
                 reply: 'Maaf, terjadi kesalahan. Silakan coba lagi.'
