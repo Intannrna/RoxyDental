@@ -87,7 +87,7 @@ export default function TikaChatbot() {
                                     {msg.role === 'user' ? <User className="w-4 h-4 text-pink-600" /> : <Bot className="w-4 h-4 text-white" />}
                                 </div>
 
-                                <div className={`p-3 rounded-2xl text-sm shadow-sm leading-relaxed ${msg.role === 'user'
+                                <div className={`p-3 rounded-2xl text-sm shadow-sm leading-relaxed whitespace-pre-wrap break-words ${msg.role === 'user'
                                     ? 'bg-pink-600 text-white rounded-br-none'
                                     : 'bg-white text-gray-700 border border-gray-100 rounded-bl-none'
                                     }`}>
