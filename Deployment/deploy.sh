@@ -9,8 +9,8 @@ git pull origin main
 
 # 2. Rebuild and restart containers
 echo "building and researching containers..."
-docker compose build --no-cache
-docker compose up -d
+docker compose --env-file .env.prod build --no-cache
+docker compose --env-file .env.prod up -d
 
 # 3. Prune unused images to save space
 echo "🧹 Cleaning up old images..."
