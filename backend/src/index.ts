@@ -10,6 +10,7 @@ import aiRoutes from './routes/ai.routes';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+app.enable('trust proxy');
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
