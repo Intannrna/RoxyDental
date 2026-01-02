@@ -41,7 +41,7 @@ export default function SettingsAbout() {
           <SettingsSidebar
             activeMenu={activeMenu}
             setActiveMenu={setActiveMenu}
-            setActiveMenu={setActiveMenu}
+
           />
 
           {/* Main Content */}
