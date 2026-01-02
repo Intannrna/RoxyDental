@@ -36,6 +36,7 @@ services:
       - roxy-network
 
   # --- AI Service ---
+  # --- AI Service ---
   ai:
     container_name: roxy-ai
     build:
@@ -44,8 +45,16 @@ services:
     restart: always
     env_file: .env.prod
     environment:
+      # Ini sudah benar pakai DIRECT_URL biar Python ga bingung
       DATABASE_URL: ${DIRECT_URL}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+
+    # 👇 TAMBAHKAN BAGIAN INI (Wajib sejajar dengan environment)
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
+      - net.ipv6.conf.default.disable_ipv6=1
+    # 👆 SAMPAI SINI
+
     networks:
       - roxy-network
 
