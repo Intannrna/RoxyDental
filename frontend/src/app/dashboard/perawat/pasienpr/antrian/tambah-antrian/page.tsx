@@ -264,12 +264,13 @@ export default function TambahAntrianPage() {
                 type="tel"
                 placeholder="08xxxxxxxxxx"
                 value={formData.phone}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "");
                   setFormData((prev) => ({
                     ...prev,
-                    phone: e.target.value,
+                    phone: val,
                   }))
-                }
+                }}
                 className="border-2 border-pink-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-300 text-base"
                 maxLength={15}
                 disabled={loading}
