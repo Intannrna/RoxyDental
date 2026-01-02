@@ -1,4 +1,14 @@
-import { User } from "@shared/schema";
+// Hapus import yang error ini:
+// import { User } from "@shared/schema";
+
+// GANTI DENGAN INI (Definisi Manual):
+export interface User {
+  id: number;
+  username: string;
+  nama: string;
+  role: "dokter" | "perawat" | "admin"; // Kita definisikan role disini
+  [key: string]: any; // Membolehkan field tambahan lain agar tidak error
+}
 
 const AUTH_KEY = "poladc_user";
 
@@ -36,6 +46,7 @@ export const auth = {
     if (!isClient()) return null;
 
     const user = this.getUser();
-    return user?.role ?? null;
+    // Casting tipe role agar sesuai return type function
+    return (user?.role as "dokter" | "perawat") ?? null;
   }
 };
