@@ -224,7 +224,10 @@ export default function SettingsAccountInfo() {
                     <Label className="text-pink-900 font-semibold mb-1">Nomor Telepon</Label>
                     <Input
                       value={profileData.phone}
-                      onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        setProfileData({ ...profileData, phone: val });
+                      }}
                       className="border-pink-300"
                     />
                   </div>

@@ -54,6 +54,14 @@ export default function RegisterPage() {
       setEmailExists(false);
       setEmailExistsMessage("");
     }
+
+    if (name === "phone") {
+      // Hanya izinkan angka
+      const numericValue = value.replace(/\D/g, "");
+      setFormData((prev) => ({ ...prev, [name]: numericValue }));
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -275,7 +283,7 @@ export default function RegisterPage() {
               <h2 className="text-2xl sm:text-3xl font-bold text-pink-600 text-center">Perawat POLABDC</h2>
             </div>
 
-           <div className="flex flex-col items-center mb-8 animate-in fade-in zoom-in duration-300">
+            <div className="flex flex-col items-center mb-8 animate-in fade-in zoom-in duration-300">
 
               {/* LOGO */}
               <div

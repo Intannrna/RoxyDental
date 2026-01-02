@@ -243,7 +243,10 @@ function SettingsAccountPageContent() {
                     <Label className="text-pink-900 font-semibold mb-1">Nomor Telepon</Label>
                     <Input
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        setFormData({ ...formData, phone: val });
+                      }}
                       className="border-pink-300"
                     />
                   </div>
