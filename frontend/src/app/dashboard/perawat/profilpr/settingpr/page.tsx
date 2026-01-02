@@ -10,7 +10,6 @@ import SettingsSidebar from "@/components/ui/SettingsSidebarpr";
 
 export default function SettingsAbout() {
   const [activeMenu, setActiveMenu] = useState("tentang");
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   const aboutInfo = {
     appName: "Sistem Manajemen Rumah Sakit",
@@ -42,7 +41,7 @@ export default function SettingsAbout() {
           <SettingsSidebar
             activeMenu={activeMenu}
             setActiveMenu={setActiveMenu}
-            onLogout={() => setLogoutDialogOpen(true)}
+            setActiveMenu={setActiveMenu}
           />
 
           {/* Main Content */}
